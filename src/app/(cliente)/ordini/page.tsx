@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Ordini" };
 
 async function Elenco() {
   const s = await leggiSessione();
-  if (!s) redirect("/accedi");
+  if (!s || s.ruolo !== "cliente") redirect("/accedi");
   const cliente = await clientePerCodice(s.codiceCliente);
   if (!cliente) redirect("/accedi");
   const ordini = await ordiniCliente(cliente.id);

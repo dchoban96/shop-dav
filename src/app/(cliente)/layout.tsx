@@ -17,6 +17,7 @@ export default function LayoutCliente({ children }: LayoutProps<"/">) {
 async function Protetto({ children }: { children: ReactNode }) {
   const sessione = await leggiSessione();
   if (!sessione) redirect("/accedi");
+  if (sessione.ruolo !== "cliente") redirect("/admin");
   const cliente = await clientePerCodice(sessione.codiceCliente);
   if (!cliente) redirect("/accedi");
   const nelCarrello = await contaCarrello(cliente.id);

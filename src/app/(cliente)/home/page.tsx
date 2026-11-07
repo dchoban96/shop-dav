@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Home" };
 
 async function SezioneTuoiArticoli() {
   const s = await leggiSessione();
-  if (!s) redirect("/accedi");
+  if (!s || s.ruolo !== "cliente") redirect("/accedi");
   const cliente = await clientePerCodice(s.codiceCliente);
   if (!cliente) redirect("/accedi");
   const voci = await storicoCliente(cliente.id);

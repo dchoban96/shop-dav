@@ -7,7 +7,7 @@ import { Resend } from "resend";
 import { formattaPrezzo } from "@/lib/dati/catalogo";
 import { formattaData, type Cliente, type Ordine, type RigaOrdine } from "@/lib/dati/ordini";
 
-type Dati = { cliente: Cliente; ordine: Ordine; righe: RigaOrdine[] };
+type Dati = { cliente: Cliente; ordine: Ordine; righe: RigaOrdine[]; emailUfficio?: string };
 
 const h = (s: string | null | undefined) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -50,7 +50,7 @@ export function testoOrdine({ cliente, ordine, righe }: Dati): string {
 
 export async function inviaEmailOrdine(dati: Dati): Promise<{ inviata: boolean; motivo?: string }> {
   const chiave = process.env.RESEND_API_KEY;
-  const ufficio = process.env.EMAIL_ORDINI || "info@davsnc.it";
+  const ufficio = dati.emailUfficio || process.env.EMAIL_ORDINI || "info@davsnc.it";
   const mittente = process.env.EMAIL_MITTENTE || "DAV Ordini <ordini@davsnc.it>";
   const urlAdmin = `${process.env.APP_URL || "http://localhost:3000"}/admin/ordini/${dati.ordine.id}`;
   const oggetto = `Ordine n. ${dati.ordine.numero} – ${dati.cliente.ragione_sociale}`;

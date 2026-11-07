@@ -14,7 +14,7 @@ type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ conferma
 
 async function Dettaglio({ params, searchParams }: Props) {
   const s = await leggiSessione();
-  if (!s) redirect("/accedi");
+  if (!s || s.ruolo !== "cliente") redirect("/accedi");
   const [{ id }, { confermato }, cliente] = await Promise.all([params, searchParams, clientePerCodice(s.codiceCliente)]);
   if (!cliente) redirect("/accedi");
   const dettaglio = Number.isInteger(Number(id)) ? await ordinePerId(cliente.id, Number(id)) : null;

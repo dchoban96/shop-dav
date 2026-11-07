@@ -112,7 +112,7 @@ function RigaCarrello({ riga }: { riga: RigaOrdine }) {
 
 async function Contenuto({ searchParams }: Props) {
   const s = await leggiSessione();
-  if (!s) redirect("/accedi");
+  if (!s || s.ruolo !== "cliente") redirect("/accedi");
   const [{ errore }, cliente] = await Promise.all([searchParams, clientePerCodice(s.codiceCliente)]);
   if (!cliente) redirect("/accedi");
   const bozza = await carrelloBozza(cliente.id, false);

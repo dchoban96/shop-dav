@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { inviaEmailOrdine } from "@/lib/email/ordine";
+import { leggiImpostazioni } from "@/lib/dati/admin";
 import {
   aggiornaRiga,
   aggiungiAlCarrello,
@@ -17,7 +18,7 @@ import { leggiSessione } from "@/lib/sessione";
 
 async function clienteCorrente(): Promise<Cliente> {
   const s = await leggiSessione();
-  if (!s) redirect("/accedi");
+  if (!s || s.ruolo !== "cliente") redirect("/accedi");
   const c = await clientePerCodice(s.codiceCliente);
   if (!c) redirect("/accedi");
   return c;
@@ -103,7 +104,8 @@ export async function conferma(formData: FormData): Promise<void> {
   }
   const dettaglio = await ordinePerId(c.id, ordine.id);
   if (dettaglio) {
-    const esito = await inviaEmailOrdine({ cliente: c, ordine: dettaglio.ordine, righe: dettaglio.righe });
+    const { email_ordini } = await leggiImpostazioni();
+    const esito = await inviaEmailOrdine({ cliente: c, ordine: dettaglio.ordine, righe: dettaglio.righe, emailUfficio: email_ordini });
     if (esito.inviata) await segnaEmailInviata(ordine.id);
   }
   refresh();
