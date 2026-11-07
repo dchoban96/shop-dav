@@ -23,6 +23,10 @@ async function Dettaglio({ params }: Props) {
       <FotoArticolo articolo={articolo} grande />
       <div className="flex flex-col gap-4">
         <div>
+          {articolo.fornitore?.logo_path && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={articolo.fornitore.logo_path} alt={nomeMarchio(articolo)} className="mb-2 h-8 w-auto max-w-[160px] object-contain object-left" />
+          )}
           <p className="etichetta">{nomeMarchio(articolo)}</p>
           <h1 className="mt-1 text-3xl leading-tight">{nome}</h1>
           <p className="mt-2 text-sm text-slate">
