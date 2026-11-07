@@ -86,7 +86,7 @@ async function main() {
 
   await conParallelismo(lavoro, PARALLELI, async (v, i) => {
     try {
-      let percorsoFoto = `foto/${v.cod_dav}.webp`;
+      const percorsoFoto = `foto/${v.cod_dav}.webp`;
       if (!soloCollega) {
         const originale = readFileSync(v.foto);
         const webp = await sharp(originale)
