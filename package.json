@@ -30,6 +30,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^2.0.0-beta.v.12",
     "@electric-sql/pglite": "^0.5.15",
+    "@tailwindcss/postcss": "^4.3.5",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
