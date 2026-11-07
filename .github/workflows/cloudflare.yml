@@ -1,0 +1,40 @@
+name: Build e deploy su Cloudflare
+
+# Il progetto si compila su Linux (workerd non esiste per Windows ARM64).
+# La build gira sempre; il deploy solo se nel repo ci sono i segreti di Cloudflare.
+
+on:
+  push:
+    branches: [main, cloudflare]
+  workflow_dispatch:
+
+concurrency:
+  group: cloudflare-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Installa dipendenze
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build per Cloudflare
+        run: npm run build:vinext
+
+      - name: Deploy su Cloudflare Workers
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && github.ref == 'refs/heads/main' }}
+        run: npm run deploy:vinext

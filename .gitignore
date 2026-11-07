@@ -50,3 +50,6 @@ next-env.d.ts
 /public/foto
 /public/foto_fornitori
 /scratch
+/dist/
+.vinext/
+.cloudflare/
