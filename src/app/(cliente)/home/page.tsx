@@ -1,20 +1,96 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { leggiFamiglie, leggiMarchi } from "@/lib/dati/catalogo";
+import { redirect } from "next/navigation";
+import { Bottone } from "@/components/Bottone";
+import { FotoArticolo } from "@/components/catalogo/SchedaArticolo";
+import { formattaPrezzo, leggiFamiglie, leggiMarchi } from "@/lib/dati/catalogo";
+import { clientePerCodice, formattaData, storicoCliente } from "@/lib/dati/ordini";
+import { leggiSessione } from "@/lib/sessione";
+import { aggiungiDaStorico } from "../azioni";
 
 export const metadata: Metadata = { title: "Home" };
 
-/**
- * Home del cliente (STRUTTURA, sezione 1): quattro sezioni in quest'ordine.
- * Le prime tre dipendono dallo storico vendite (import NTS); la quarta è viva.
- */
+/** Home del cliente (STRUTTURA, sezione 1): quattro sezioni in quest'ordine. */
+
+async function SezioneTuoiArticoli() {
+  const s = await leggiSessione();
+  if (!s) redirect("/accedi");
+  const cliente = await clientePerCodice(s.codiceCliente);
+  if (!cliente) redirect("/accedi");
+  const voci = await storicoCliente(cliente.id);
+
+  return (
+    <section className="rounded-lg border border-azzurro/40 p-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 className="text-2xl">I tuoi articoli</h2>
+        <p className="text-sm text-slate">Quantità dell’ultimo ordine già impostate.</p>
+      </div>
+      {voci.length === 0 ? (
+        <p className="mt-4 rounded-md bg-ice px-4 py-3 text-sm text-slate">
+          Qui compariranno gli articoli che ordini di solito. Dopo il primo ordine, o con lo storico vendite, la lista si riempie da sola.
+        </p>
+      ) : (
+        <form action={aggiungiDaStorico} className="mt-4">
+          <ul className="divide-y divide-ice">
+            {voci.map((v) => {
+              const articoloFinto = {
+                cod_dav: v.cod_dav, descrizione_nts: v.descrizione, descrizione_pulita: v.descrizione, um: v.um, pezzi_confezione: null,
+                prezzo_listino: null, foto_path: v.foto_path, scheda_pdf_path: null, top80: false,
+                famiglia: v.famiglia ? { id: 0, nome: v.famiglia } : null, fornitore: null, giacenza: null,
+              };
+              return (
+                <li key={v.cod_dav} className="flex items-center gap-3 py-3">
+                  <FotoArticolo articolo={articoloFinto} formato="piccola" />
+                  <div className="min-w-0 flex-1">
+                    {v.marchio && <p className="etichetta truncate">{v.marchio}</p>}
+                    <Link href={`/catalogo/${encodeURIComponent(v.cod_dav)}`} className="block truncate font-semibold hover:underline">
+                      {v.descrizione}
+                    </Link>
+                    <p className="text-xs text-slate">
+                      ultimo acquisto {formattaData(v.ultima_data, { month: "2-digit", year: "numeric" })} · 12 mesi: {v.n_ordini_12m}{" "}
+                      {v.n_ordini_12m === 1 ? "ordine" : "ordini"}, {v.qta_12m} {v.um ?? "conf."}
+                      {v.fatturato_12m > 0 ? `, ${formattaPrezzo(v.fatturato_12m)}` : ""}
+                    </p>
+                  </div>
+                  <label htmlFor={`qta-${v.cod_dav}`} className="sr-only">
+                    Quantità {v.descrizione}
+                  </label>
+                  <input
+                    id={`qta-${v.cod_dav}`}
+                    name={`qta:${v.cod_dav}`}
+                    type="number"
+                    min={0}
+                    step={1}
+                    defaultValue={v.ultima_quantita ?? 1}
+                    inputMode="numeric"
+                    className="h-10 w-16 rounded-md border border-azzurro bg-bianco text-center text-base"
+                  />
+                  <button
+                    type="submit"
+                    name="solo"
+                    value={v.cod_dav}
+                    className="flex h-10 w-10 items-center justify-center rounded-md border border-navy text-lg font-semibold text-navy hover:bg-ice"
+                    aria-label={`Aggiungi ${v.descrizione} al carrello`}
+                  >
+                    +
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-4 flex justify-end">
+            <Bottone type="submit" name="tutto" value="1">
+              Aggiungi tutto al carrello
+            </Bottone>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
 const sezioniInArrivo = [
-  {
-    titolo: "I tuoi articoli",
-    testo: "Gli articoli che ordini di solito, con le quantità dell’ultimo ordine già pronte.",
-    nota: "In arrivo con lo storico vendite.",
-  },
   {
     titolo: "Consigliati per te",
     testo: "Articoli che ordinavi e non prendi da un po’, e i più richiesti nella tua categoria.",
@@ -38,29 +114,21 @@ async function SezioneCatalogo() {
           Tutti i {totale} articoli
         </Link>
       </div>
-
       <p className="etichetta mt-6">Per famiglia</p>
       <ul className="mt-2 flex flex-wrap gap-2">
         {famiglie.map((f) => (
           <li key={f.id}>
-            <Link
-              href={`/catalogo?famiglia=${f.id}`}
-              className="inline-block rounded-md bg-ice px-3 py-1.5 text-sm text-navy hover:bg-azzurro/40"
-            >
+            <Link href={`/catalogo?famiglia=${f.id}`} className="inline-block rounded-md bg-ice px-3 py-1.5 text-sm text-navy hover:bg-azzurro/40">
               {f.nome} <span className="text-slate">{f.n_articoli}</span>
             </Link>
           </li>
         ))}
       </ul>
-
       <p className="etichetta mt-6">Per marchio</p>
       <ul className="mt-2 flex flex-wrap gap-2">
         {marchi.slice(0, 24).map((m) => (
           <li key={m.id}>
-            <Link
-              href={`/catalogo?marchio=${m.id}`}
-              className="inline-block rounded-md border border-azzurro/40 px-3 py-1.5 text-sm text-navy hover:bg-ice"
-            >
+            <Link href={`/catalogo?marchio=${m.id}`} className="inline-block rounded-md border border-azzurro/40 px-3 py-1.5 text-sm text-navy hover:bg-ice">
               {m.nome_breve ?? m.nome_nts} <span className="text-slate">{m.n_articoli}</span>
             </Link>
           </li>
@@ -84,17 +152,14 @@ export default function HomeCliente() {
         <label htmlFor="ricerca" className="sr-only">
           Cerca un articolo
         </label>
-        <input
-          id="ricerca"
-          name="q"
-          type="search"
-          placeholder="Cerca per nome o codice"
-          className="w-full rounded-md border border-azzurro bg-bianco px-4 py-3 text-base"
-        />
+        <input id="ricerca" name="q" type="search" placeholder="Cerca per nome o codice" className="w-full rounded-md border border-azzurro bg-bianco px-4 py-3 text-base" />
       </form>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
+          <Suspense fallback={<p className="text-sm text-slate">Carico i tuoi articoli…</p>}>
+            <SezioneTuoiArticoli />
+          </Suspense>
           {sezioniInArrivo.map((s) => (
             <section key={s.titolo} className="rounded-lg border border-azzurro/40 p-6">
               <h2 className="text-2xl">{s.titolo}</h2>
@@ -111,10 +176,7 @@ export default function HomeCliente() {
           <div className="sticky top-24 rounded-lg border border-azzurro/40 p-5">
             <p className="etichetta">I tuoi acquisti</p>
             <h2 className="mt-1 text-xl">Ultimi 12 mesi</h2>
-            <p className="mt-4 text-sm text-slate">
-              Qui compariranno fatturato, ripartizione per marchio o famiglia, ultimo ordine e statistiche per
-              articolo.
-            </p>
+            <p className="mt-4 text-sm text-slate">Qui compariranno fatturato, ripartizione per marchio o famiglia, ultimo ordine e statistiche per articolo.</p>
           </div>
         </aside>
       </div>

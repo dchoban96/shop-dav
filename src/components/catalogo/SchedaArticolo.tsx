@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { aggiungi } from "@/app/(cliente)/azioni";
 import {
   type Articolo,
   type Disponibilita,
@@ -8,21 +9,30 @@ import {
 } from "@/lib/dati/catalogo";
 
 /** Segnaposto foto: fondo ice con il nome della famiglia, mai la foto di un altro prodotto. */
-export function FotoArticolo({ articolo, grande = false }: { articolo: Articolo; grande?: boolean }) {
+type Formato = "card" | "grande" | "piccola";
+
+const CLASSI_FOTO: Record<Formato, string> = {
+  card: "h-20 w-20 shrink-0 sm:h-auto sm:w-full sm:aspect-square",
+  grande: "mx-auto aspect-square w-full max-w-xs md:max-w-none",
+  piccola: "h-16 w-16 shrink-0",
+};
+
+export function FotoArticolo({ articolo, grande = false, formato }: { articolo: Articolo; grande?: boolean; formato?: Formato }) {
+  const classi = CLASSI_FOTO[formato ?? (grande ? "grande" : "card")];
   if (articolo.foto_path) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={articolo.foto_path}
         alt={articolo.descrizione_pulita ?? articolo.descrizione_nts}
-        className={`${grande ? "mx-auto aspect-square w-full max-w-xs md:max-w-none" : "h-20 w-20 shrink-0 sm:h-auto sm:w-full sm:aspect-square"} rounded-md object-contain bg-bianco`}
+        className={`${classi} rounded-md object-contain bg-bianco`}
       />
     );
   }
   return (
     <div
       aria-hidden="true"
-      className={`${grande ? "mx-auto aspect-square w-full max-w-xs md:max-w-none" : "h-20 w-20 shrink-0 sm:h-auto sm:w-full sm:aspect-square"} flex items-center justify-center rounded-md bg-ice p-2 text-center font-serif text-xs leading-tight text-slate`}
+      className={`${classi} flex items-center justify-center rounded-md bg-ice p-1 text-center font-serif text-[10px] leading-tight text-slate`}
     >
       {articolo.famiglia?.nome ?? "Articolo"}
     </div>
@@ -73,6 +83,25 @@ export function SchedaArticolo({ articolo, stato }: Props) {
           <Prezzo valore={articolo.prezzo_listino} />
           <BadgeDisponibilita stato={stato} />
         </div>
+        <form action={aggiungi} className="mt-2 flex items-center gap-2">
+          <input type="hidden" name="cod_dav" value={articolo.cod_dav} />
+          <label htmlFor={`qta-${articolo.cod_dav}`} className="sr-only">
+            Quantità
+          </label>
+          <input
+            id={`qta-${articolo.cod_dav}`}
+            name="qta"
+            type="number"
+            min={1}
+            step={1}
+            defaultValue={1}
+            inputMode="numeric"
+            className="h-10 w-16 rounded-md border border-azzurro bg-bianco text-center text-base"
+          />
+          <button type="submit" className="h-10 flex-1 rounded-md bg-navy px-3 text-sm font-semibold text-bianco hover:bg-[#0d2144]">
+            Aggiungi
+          </button>
+        </form>
       </div>
     </article>
   );

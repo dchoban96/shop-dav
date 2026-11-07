@@ -79,6 +79,27 @@ async function main() {
   const p5 = await db.query(`select * from prezzo_cliente(1, 'NON_ESISTE')`);
   assert(p5.rows.length === 0, "articolo inesistente → nessuna riga");
 
+  // conferma_ordine: prezzi copiati riga per riga, totale, storico e mensili aggiornati
+  await db.exec(`
+    insert into ordini (cliente_id, stato) values (1, 'bozza');
+    insert into righe_ordine (ordine_id, cod_dav, descrizione, quantita) values (1, 'FARMIR', 'FARCITURA MIRTILLI KG.6', 2), (1, 'A4803', 'UOVA', 1);
+  `);
+  const conf = (await db.query<{ stato: string; totale_netto: string }>(`select stato, totale_netto from conferma_ordine(1, current_date + 1, '  ')`)).rows[0];
+  assert(conf.stato === "inviato" && Number(conf.totale_netto) === 63.1, `conferma_ordine: ${JSON.stringify(conf)}`); // 22.8 × 2 + 17.5
+  const riga = (await db.query<{ prezzo_finale: string; origine: string | null }>(`select prezzo_finale, null as origine from righe_ordine where ordine_id = 1 and cod_dav = 'A4803'`)).rows[0];
+  assert(Number(riga.prezzo_finale) === 17.5, `prezzo copiato in riga: ${JSON.stringify(riga)}`);
+  const st = (await db.query<{ n: number; q: string; f: string }>(`select n_ordini_12m n, ultima_quantita q, fatturato_12m f from storico_acquisti where cliente_id = 1 and cod_dav = 'FARMIR'`)).rows[0];
+  assert(st && Number(st.n) === 1 && Number(st.q) === 2 && Number(st.f) === 45.6, `storico: ${JSON.stringify(st)}`);
+  const me = (await db.query<{ n: string }>(`select count(*) n from acquisti_mensili where cliente_id = 1`)).rows[0];
+  assert(Number(me.n) === 2, `mensili: ${me.n}`);
+  let doppia = false;
+  try {
+    await db.query(`select * from conferma_ordine(1, current_date + 1, null)`);
+  } catch {
+    doppia = true;
+  }
+  assert(doppia, "conferma_ordine su ordine già inviato deve fallire");
+
   // RLS: cliente C001 (utente u1) vede solo le proprie condizioni, non quelle di C002
   await db.exec(`
     insert into auth.users (id) values ('11111111-1111-1111-1111-111111111111'), ('22222222-2222-2222-2222-222222222222');

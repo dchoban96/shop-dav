@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { BadgeDisponibilita, FotoArticolo, Prezzo } from "@/components/catalogo/SchedaArticolo";
 import { Bottone } from "@/components/Bottone";
 import { disponibilita, leggiArticolo, nomeMarchio, sogliaEsaurimento } from "@/lib/dati/catalogo";
+import { aggiungi } from "../../azioni";
 
 export const metadata: Metadata = { title: "Articolo" };
 
@@ -63,7 +64,9 @@ async function Dettaglio({ params }: Props) {
           <span className="text-xs text-slate">Prezzo riservato, IVA esclusa</span>
         </div>
 
-        <form className="flex items-center gap-3" action="#">
+        <form className="flex items-center gap-3" action={aggiungi}>
+          <input type="hidden" name="cod_dav" value={articolo.cod_dav} />
+          <input type="hidden" name="torna" value="/carrello" />
           <label htmlFor="qta" className="etichetta">
             Quantità
           </label>
@@ -77,11 +80,10 @@ async function Dettaglio({ params }: Props) {
             inputMode="numeric"
             className="w-24 rounded-md border border-azzurro bg-bianco px-3 py-3 text-center text-base"
           />
-          <Bottone type="submit" disabled className="flex-1">
+          <Bottone type="submit" className="flex-1">
             Aggiungi al carrello
           </Bottone>
         </form>
-        <p className="text-xs text-slate">Il carrello arriva nel prossimo passo.</p>
 
         <details className="text-sm text-slate">
           <summary className="cursor-pointer font-semibold text-navy">Descrizione completa del gestionale</summary>
