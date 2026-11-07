@@ -4,7 +4,7 @@ import { esci } from "@/app/(pubblico)/accedi/azioni";
 
 const voci = [
   { href: "/home", label: "Home", attiva: true },
-  { href: "/catalogo", label: "Catalogo", attiva: false },
+  { href: "/catalogo", label: "Catalogo", attiva: true },
   { href: "/carrello", label: "Carrello", attiva: false },
   { href: "/ordini", label: "Ordini", attiva: false },
 ] as const;
