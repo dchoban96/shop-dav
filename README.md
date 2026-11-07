@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Shop B2B DAV
 
-## Getting Started
+Portale riservato ai clienti di D.A.V. snc (Distribuzione Alimentare Valtellinese, Caiolo SO):
+sito pubblico, accesso su invito, riordino rapido, catalogo, prezzi per cliente, ordini via email.
 
-First, run the development server:
+Stack: Next.js (App Router) + Tailwind CSS 4, Supabase (Postgres, Auth, Storage), Resend per le email.
+
+## Avvio
 
 ```bash
+npm install
+cp .env.example .env.local   # compilare le chiavi
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Il sito risponde su http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Struttura
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/app/(pubblico)/   landing, chi-siamo, partner, policy, accedi, recupera
+src/components/       Header, Footer, Logo, Bottone, Sezione
+src/lib/azienda.ts    dati aziendali mostrati nel sito pubblico
+src/app/globals.css   colori e font del brand (Tailwind @theme)
+```
 
-## Learn More
+## Brand
 
-To learn more about Next.js, take a look at the following resources:
+Colori: navy `#122C5A` (primario), azzurro `#90B1CA` (accento), bianco, ice `#EEF3F7`, slate `#51627A`.
+Font: Libre Baskerville per titoli e prezzi, Libre Franklin per testo e interfaccia (Google Fonts).
+Il logo in `src/components/Logo.tsx` è un segnaposto fino all'arrivo dei file ufficiali in `public/brand/`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Dati
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Nessun dato cliente, listino o export gestionale va nel repository. Le cartelle `dati/`, i file
+`.xlsx`/`.csv` e le foto fornitori sono esclusi da git. Le chiavi stanno solo in `.env.local`.
