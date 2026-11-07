@@ -42,6 +42,17 @@ I loghi in `public/brand/` sono i file ufficiali delle brand guidelines: orizzon
 emblema piccolo per favicon e header mobile, versioni reversed e bianca per fondi scuri. Non vanno
 ridisegnati né ricolorati.
 
+## Database
+
+Migrazioni in `supabase/migrations/` (schema, RLS, funzioni), istruzioni in `supabase/README.md`.
+
+```bash
+npm run test:db      # applica le migrazioni su Postgres in memoria e verifica funzioni e RLS
+npm run import -- --tipo catalogo --file ../FotoFornitori/Shop/articoli_catalogo.csv --dry-run
+```
+
+L'import vero richiede `NEXT_PUBLIC_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`.
+
 ## Dati
 
 Nessun dato cliente, listino o export gestionale va nel repository. Le cartelle `dati/`, i file
