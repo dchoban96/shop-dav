@@ -76,8 +76,10 @@ function capitalizza(s: string): string {
 
 /**
  * Sigle finali per fornitore (STRUTTURA, sezione 4): l'ultima parola della descrizione
- * conta come sigla solo se ricorre in almeno il 20 % degli articoli del fornitore,
- * non contiene cifre con unità (KG., PZ., LT., GR., X) e ha 2–12 caratteri.
+ * conta come sigla se sembra una sigla (niente pesi o formati, 2–12 caratteri) e ricorre
+ * abbastanza spesso tra gli articoli del fornitore: almeno 5 volte e nell'8 % dei casi
+ * per i fornitori con 20 o più articoli (Delifrance ha DELI, DLF, RMM e DF insieme),
+ * almeno 2 volte e nel 30 % dei casi per quelli più piccoli.
  */
 export function calcolaSigle(righe: RigaCatalogo[]): Map<string, string[]> {
   const perFornitore = new Map<string, Map<string, number>>();
@@ -94,7 +96,7 @@ export function calcolaSigle(righe: RigaCatalogo[]): Map<string, string[]> {
   for (const [forn, conteggi] of perFornitore) {
     const tot = totali.get(forn) ?? 1;
     const sigle = [...conteggi.entries()]
-      .filter(([, n]) => n >= 2 && n / tot >= 0.2)
+      .filter(([, n]) => (tot >= 20 ? n >= 5 && n / tot >= 0.08 : n >= 2 && n / tot >= 0.3))
       .sort((a, b) => b[1] - a[1])
       .map(([s]) => s);
     if (sigle.length) out.set(forn, sigle);

@@ -77,9 +77,14 @@ async function importaCatalogo(file: string, dryRun: boolean) {
   const idFornitore = new Map(fornitori!.map((f) => [f.nome_nts as string, f.id as number]));
   const idFamiglia = new Map(famiglie!.map((f) => [f.nome as string, f.id as number]));
 
-  const { data: esistenti, error: ee } = await db.from("articoli").select("cod_dav");
-  if (ee) throw new Error(ee.message);
-  const giaPresenti = new Set((esistenti ?? []).map((a) => a.cod_dav as string));
+  // L'API restituisce al massimo 1000 righe per chiamata: si legge a pagine.
+  const giaPresenti = new Set<string>();
+  for (let da = 0; ; da += 1000) {
+    const { data, error } = await db.from("articoli").select("cod_dav").range(da, da + 999);
+    if (error) throw new Error(error.message);
+    for (const a of data ?? []) giaPresenti.add(a.cod_dav as string);
+    if (!data || data.length < 1000) break;
+  }
 
   let nuovi = 0;
   let aggiornati = 0;
