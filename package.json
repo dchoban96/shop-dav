@@ -8,13 +8,15 @@
     "start": "next start",
     "lint": "eslint",
     "import": "tsx scripts/import.ts",
-    "test:db": "tsx scripts/test-migrazioni.ts"
+    "test:db": "tsx scripts/test-migrazioni.ts",
+    "migra": "tsx scripts/migra.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
     "csv-parse": "^7.0.3",
     "next": "16.4.5",
+    "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
@@ -22,6 +24,7 @@
     "@electric-sql/pglite": "^0.5.15",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
