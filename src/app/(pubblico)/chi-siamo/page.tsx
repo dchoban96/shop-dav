@@ -18,9 +18,10 @@ export default function ChiSiamo() {
         <div className="grid gap-10 md:grid-cols-[2fr_1fr]">
           <div className="space-y-4 text-lg leading-relaxed">
             <p>
-              {azienda.ragioneSociale} nasce il {azienda.fondazione} a Sondrio e oggi ha sede a{" "}
-              {azienda.sede}. Distribuiamo prodotti per pasticceria, panificazione, pizzeria e
-              ristorazione.
+              {azienda.ragioneSociale} nasce il {azienda.fondazione} in un garage di Sondrio,
+              consegnando lievito ai panifici della zona. Oggi lavora da un magazzino a{" "}
+              {azienda.sede} e rifornisce pasticcerie, panifici, gelaterie, pizzerie e ristoranti
+              della Valtellina e delle valli vicine.
             </p>
             <p>
               Siamo distributore esclusivo Irca Group in Valtellina e l’unica realtà della zona che

@@ -1,15 +1,29 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Bottone } from "@/components/Bottone";
 import { azienda } from "@/lib/azienda";
+import { accedi } from "./azioni";
 
 export const metadata: Metadata = { title: "Area clienti" };
 
+type Props = { searchParams: Promise<{ errore?: string }> };
+
+async function MessaggioErrore({ searchParams }: Props) {
+  const { errore } = await searchParams;
+  if (!errore) return null;
+  return (
+    <p role="alert" className="rounded-md border border-navy bg-ice px-4 py-3 text-sm">
+      Codice cliente o password non validi. Nella versione demo la password è il codice cliente.
+    </p>
+  );
+}
+
 /**
- * Pagina di accesso: per ora solo interfaccia. L’autenticazione (Supabase Auth con
- * invito via email) arriva nel passo 3 dell’ordine di costruzione.
+ * Accesso provvisorio (demo): codice cliente come login e come password.
+ * L'accesso con email e invito arriva con Supabase Auth (passo 3 della struttura).
  */
-export default function Accedi() {
+export default function Accedi({ searchParams }: Props) {
   return (
     <div className="mx-auto max-w-md px-4 py-16">
       <p className="etichetta">Area clienti</p>
@@ -18,18 +32,24 @@ export default function Accedi() {
         L’accesso è riservato ai clienti DAV e si ottiene su invito dell’ufficio.
       </p>
 
-      <form className="mt-8 space-y-5" action="#" method="post">
+      <form className="mt-8 space-y-5" action={accedi}>
+        <Suspense fallback={null}>
+          <MessaggioErrore searchParams={searchParams} />
+        </Suspense>
         <div>
-          <label htmlFor="email" className="etichetta block">
-            Email
+          <label htmlFor="codice" className="etichetta block">
+            Codice cliente
           </label>
           <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
+            id="codice"
+            name="codice"
+            type="text"
+            inputMode="text"
+            autoComplete="username"
+            autoCapitalize="characters"
             required
-            className="mt-2 w-full rounded-md border border-azzurro bg-bianco px-4 py-3 text-base"
+            maxLength={12}
+            className="mt-2 w-full rounded-md border border-azzurro bg-bianco px-4 py-3 text-base uppercase"
           />
         </div>
         <div>
@@ -45,7 +65,7 @@ export default function Accedi() {
             className="mt-2 w-full rounded-md border border-azzurro bg-bianco px-4 py-3 text-base"
           />
         </div>
-        <Bottone type="submit" className="w-full" disabled>
+        <Bottone type="submit" className="w-full">
           Entra
         </Bottone>
         <p className="text-sm">

@@ -50,7 +50,7 @@ export default function Home() {
               </BottoneLink>
             </div>
           </div>
-          <Emblema size={180} className="hidden md:block" />
+          <Emblema size={240} className="hidden md:block" />
         </div>
       </section>
 
