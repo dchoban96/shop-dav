@@ -21,7 +21,7 @@ async function Dettaglio({ params }: Props) {
   const stato = disponibilita(articolo.giacenza, soglia);
 
   return (
-    <div className="grid gap-8 md:grid-cols-[minmax(0,360px)_1fr]">
+    <div className="grid gap-8 rounded-lg border border-azzurro/40 bg-bianco p-5 md:grid-cols-[minmax(0,360px)_1fr] md:p-8">
       <FotoArticolo articolo={articolo} grande />
       <div className="flex flex-col gap-4">
         <div>

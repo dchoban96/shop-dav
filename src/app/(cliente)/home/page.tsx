@@ -4,13 +4,13 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Bottone } from "@/components/Bottone";
 import { FotoArticolo } from "@/components/catalogo/SchedaArticolo";
-import { formattaPrezzo, leggiFamiglie, leggiMarchi } from "@/lib/dati/catalogo";
+import { formattaPrezzo, fotoPerMarchio, leggiFamiglie, leggiMarchi } from "@/lib/dati/catalogo";
 import { clientePerCodice, formattaData, storicoCliente } from "@/lib/dati/ordini";
 import { leggiSessione } from "@/lib/sessione";
 import { aggiungiDaStorico } from "../azioni";
 import { Contenitore } from "@/components/Contenitore";
 import { LogoFornitore } from "@/components/LogoFornitore";
-import { ScaffaleMarchi } from "@/components/ScaffaleMarchi";
+import { ScaffaleMarchi, tileMarchio } from "@/components/ScaffaleMarchi";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -24,7 +24,7 @@ async function SezioneTuoiArticoli() {
   const voci = await storicoCliente(cliente.id);
 
   return (
-    <section className="rounded-lg border border-azzurro/40 p-6">
+    <section className="rounded-lg border border-azzurro/40 bg-bianco p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h2 className="text-2xl">I tuoi articoli</h2>
         <p className="text-sm text-slate">Quantità dell’ultimo ordine già impostate.</p>
@@ -109,21 +109,15 @@ const sezioniInArrivo = [
 ];
 
 async function SezioneCatalogo() {
-  const [famiglie, marchi] = await Promise.all([leggiFamiglie(), leggiMarchi()]);
+  const [famiglie, marchi, foto] = await Promise.all([leggiFamiglie(), leggiMarchi(), fotoPerMarchio()]);
   const totale = famiglie.reduce((s, f) => s + f.n_articoli, 0);
-  // Scaffale: i marchi con logo come tile (al massimo 12), gli altri come chip di testo.
-  const conLogo = marchi.filter((m) => m.logo_path).slice(0, 12);
-  const tile = conLogo.map((m) => ({
-    id: m.id,
-    nome: m.nome_breve ?? m.nome_nts,
-    logo: m.logo_path,
-    dettaglio: `${m.n_articoli} ${m.n_articoli === 1 ? "articolo" : "articoli"}`,
-    href: `/catalogo?marchio=${m.id}`,
-  }));
-  const altri = marchi.filter((m) => !conLogo.includes(m)).slice(0, 16);
+  // Scaffale: i primi 8 marchi per numero di articoli come card (logo o foto di ripiego), poi i chip.
+  const inScaffale = marchi.slice(0, 8);
+  const tile = inScaffale.map((m) => tileMarchio(m, foto));
+  const altri = marchi.slice(8, 24);
   const restanti = marchi.length - tile.length - altri.length;
   return (
-    <section className="rounded-lg border border-azzurro/40 p-6">
+    <section className="rounded-lg border border-azzurro/40 bg-bianco p-6">
       <div className="flex items-baseline justify-between gap-4">
         <h2 className="text-2xl">Catalogo</h2>
         <Link href="/catalogo" className="text-sm font-semibold underline underline-offset-4">
@@ -152,8 +146,8 @@ async function SezioneCatalogo() {
         ))}
         {restanti > 0 && (
           <li>
-            <Link href="/catalogo" className="inline-block px-3 py-1.5 text-sm font-semibold underline underline-offset-4">
-              e altri {restanti} marchi
+            <Link href="/marchi" className="inline-block px-3 py-1.5 text-sm font-semibold underline underline-offset-4">
+              Tutti i {marchi.length} marchi
             </Link>
           </li>
         )}
@@ -165,20 +159,13 @@ async function SezioneCatalogo() {
 export default function HomeCliente() {
   return (
     <Contenitore className="py-8">
-      <form method="get" action="/catalogo" role="search">
-        <label htmlFor="ricerca" className="sr-only">
-          Cerca un articolo
-        </label>
-        <input id="ricerca" name="q" type="search" placeholder="Cerca per nome o codice" className="w-full rounded-md border border-azzurro bg-bianco px-4 py-3 text-base" />
-      </form>
-
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
           <Suspense fallback={<p className="text-sm text-slate">Carico i tuoi articoli…</p>}>
             <SezioneTuoiArticoli />
           </Suspense>
           {sezioniInArrivo.map((s) => (
-            <section key={s.titolo} className="rounded-lg border border-azzurro/40 p-6">
+            <section key={s.titolo} className="rounded-lg border border-azzurro/40 bg-bianco p-6">
               <h2 className="text-2xl">{s.titolo}</h2>
               <p className="mt-2 text-sm text-slate">{s.testo}</p>
               <p className="mt-4 rounded-md bg-ice px-4 py-3 text-sm text-slate">{s.nota}</p>
@@ -190,7 +177,7 @@ export default function HomeCliente() {
         </div>
 
         <aside className="hidden lg:block">
-          <div className="sticky top-24 rounded-lg border border-azzurro/40 p-5">
+          <div className="sticky top-24 rounded-lg border border-azzurro/40 bg-bianco p-5">
             <p className="etichetta">I tuoi acquisti</p>
             <h2 className="mt-1 text-xl">Ultimi 12 mesi</h2>
             <p className="mt-4 text-sm text-slate">Qui compariranno fatturato, ripartizione per marchio o famiglia, ultimo ordine e statistiche per articolo.</p>

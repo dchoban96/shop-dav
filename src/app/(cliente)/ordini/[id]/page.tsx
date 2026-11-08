@@ -42,17 +42,18 @@ async function Dettaglio({ params, searchParams }: Props) {
             Inviato il {formattaData(ordine.creato_il, { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
-        <span className="rounded-md bg-ice px-3 py-1.5 text-sm font-semibold">{ETICHETTA_STATO[ordine.stato]}</span>
+        <span className="rounded-md border border-azzurro/40 bg-bianco px-3 py-1.5 text-sm font-semibold">{ETICHETTA_STATO[ordine.stato]}</span>
       </div>
 
-      <dl className="mt-6 grid gap-x-8 gap-y-2 rounded-lg bg-ice p-4 text-sm sm:grid-cols-2">
+      <dl className="mt-6 grid gap-x-8 gap-y-2 rounded-lg border border-azzurro/40 bg-bianco p-4 text-sm sm:grid-cols-2">
         <dt className="text-slate">Consegna richiesta</dt>
         <dd>{formattaData(ordine.data_consegna_richiesta, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</dd>
         <dt className="text-slate">Note</dt>
         <dd>{ordine.note ?? "—"}</dd>
       </dl>
 
-      <table className="mt-6 w-full text-sm">
+      <div className="mt-6 overflow-x-auto rounded-lg border border-azzurro/40 bg-bianco p-4">
+      <table className="w-full text-sm">
         <thead className="text-left">
           <tr className="border-b border-azzurro/40">
             <th className="etichetta py-2 font-semibold">Articolo</th>
@@ -94,6 +95,7 @@ async function Dettaglio({ params, searchParams }: Props) {
           </tr>
         </tfoot>
       </table>
+      </div>
 
       <form action={riordina} className="mt-8">
         <input type="hidden" name="ordine" value={ordine.id} />

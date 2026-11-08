@@ -1,32 +1,35 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
+import { Contenitore } from "./Contenitore";
 import { esci } from "@/app/(pubblico)/accedi/azioni";
-import { Contenitore } from "@/components/Contenitore";
 
 const voci = [
   { href: "/home", label: "Home" },
   { href: "/catalogo", label: "Catalogo" },
+  { href: "/marchi", label: "Marchi" },
   { href: "/carrello", label: "Carrello" },
   { href: "/ordini", label: "Ordini" },
 ] as const;
 
 type Props = { codiceCliente: string; ragioneSociale?: string; demo: boolean; nelCarrello: number };
 
+/** Testata dell'area clienti: logo, ricerca sempre a portata di mano, voci, cliente, uscita. */
 export function HeaderCliente({ codiceCliente, ragioneSociale, demo, nelCarrello }: Props) {
   return (
     <>
-      <header className="sticky top-0 z-20 border-b border-ice bg-bianco/95 backdrop-blur">
-        <Contenitore className="flex h-16 items-center justify-between gap-4">
+      <header className="sticky top-0 z-20 border-b border-azzurro/40 bg-bianco">
+        <Contenitore className="flex h-16 items-center gap-4 lg:gap-6">
           <Link href="/home" aria-label="Home area clienti" className="shrink-0">
             <Logo compatto />
           </Link>
-          <nav aria-label="Area clienti" className="hidden items-center gap-6 md:flex">
+          <Ricerca className="hidden min-w-0 flex-1 md:block lg:max-w-md" id="ricerca-testata" />
+          <nav aria-label="Area clienti" className="hidden items-center gap-5 md:flex">
             {voci.map((v) => (
               <Voce key={v.href} {...v} badge={v.href === "/carrello" ? nelCarrello : 0} />
             ))}
           </nav>
-          <div className="flex items-center gap-4">
-            <span className="hidden max-w-[220px] truncate text-sm text-slate sm:inline" title={ragioneSociale}>
+          <div className="ml-auto flex items-center gap-4">
+            <span className="hidden max-w-[200px] truncate text-sm text-slate xl:inline" title={ragioneSociale}>
               {ragioneSociale ?? "Cliente"} <span className="font-semibold text-navy">{codiceCliente}</span>
             </span>
             <form action={esci}>
@@ -36,14 +39,17 @@ export function HeaderCliente({ codiceCliente, ragioneSociale, demo, nelCarrello
             </form>
           </div>
         </Contenitore>
+        <div className="border-t border-ice px-4 py-2 md:hidden">
+          <Ricerca id="ricerca-testata-mobile" />
+        </div>
         {demo && (
-          <p className="bg-ice px-4 py-1.5 text-center text-xs text-slate">
+          <p className="border-t border-ice bg-ice px-4 py-1.5 text-center text-xs text-slate">
             Accesso demo: gli ordini vengono registrati ma non inviati via email.
           </p>
         )}
       </header>
 
-      <nav aria-label="Area clienti mobile" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-ice bg-bianco md:hidden">
+      <nav aria-label="Area clienti mobile" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-azzurro/40 bg-bianco md:hidden">
         {voci.map((v) => (
           <Voce key={v.href} {...v} badge={v.href === "/carrello" ? nelCarrello : 0} mobile />
         ))}
@@ -52,8 +58,25 @@ export function HeaderCliente({ codiceCliente, ragioneSociale, demo, nelCarrello
   );
 }
 
+function Ricerca({ id, className }: { id: string; className?: string }) {
+  return (
+    <form method="get" action="/catalogo" role="search" className={className}>
+      <label htmlFor={id} className="sr-only">
+        Cerca un articolo
+      </label>
+      <input
+        id={id}
+        name="q"
+        type="search"
+        placeholder="Cerca per nome o codice"
+        className="h-10 w-full rounded-md border border-azzurro bg-bianco px-4 text-sm placeholder:text-slate"
+      />
+    </form>
+  );
+}
+
 function Voce({ href, label, badge, mobile = false }: { href: string; label: string; badge: number; mobile?: boolean }) {
-  const base = mobile ? "flex min-h-14 items-center justify-center gap-1.5 text-sm font-semibold" : "flex items-center gap-1.5 text-sm font-semibold";
+  const base = mobile ? "flex min-h-14 items-center justify-center gap-1.5 text-sm font-semibold" : "flex items-center gap-1.5 text-sm font-semibold hover:text-slate";
   return (
     <Link href={href} className={`${base} text-navy`}>
       {label}

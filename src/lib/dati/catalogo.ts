@@ -155,6 +155,24 @@ export async function leggiPartner(): Promise<Partner[]> {
   return (data ?? []) as Partner[];
 }
 
+/** Per ogni fornitore, la foto dell'articolo più venduto che ne ha una: ripiego quando manca il logo. */
+export async function fotoPerMarchio(): Promise<Map<number, string>> {
+  const { data, error } = await supabaseAdmin()
+    .from("articoli")
+    .select("fornitore_id, foto_path")
+    .eq("attivo", true)
+    .not("foto_path", "is", null)
+    .not("fornitore_id", "is", null)
+    .order("fatturato_12m", { ascending: false, nullsFirst: false })
+    .limit(2000);
+  if (error) throw new Error(`fotoPerMarchio: ${error.message}`);
+  const mappa = new Map<number, string>();
+  for (const r of (data ?? []) as { fornitore_id: number; foto_path: string }[]) {
+    if (!mappa.has(r.fornitore_id)) mappa.set(r.fornitore_id, r.foto_path);
+  }
+  return mappa;
+}
+
 export async function sogliaEsaurimento(): Promise<number> {
   const { data } = await supabaseAdmin().from("impostazioni").select("valore").eq("chiave", "soglia_esaurimento").maybeSingle();
   const n = Number(data?.valore);
