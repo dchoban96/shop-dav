@@ -221,12 +221,18 @@ export default function HomeCliente() {
         </div>
 
         <aside className="min-w-0">
-          <div className="rounded-lg border border-azzurro/40 bg-bianco p-5 lg:sticky lg:top-24">
-            <p className="etichetta">I tuoi acquisti</p>
-            <h2 className="mt-1 text-xl">Ultimi 12 mesi</h2>
-            <Suspense fallback={<p className="mt-4 text-sm text-slate">Carico le statistiche…</p>}>
-              <Statistiche />
-            </Suspense>
+          {/* Da lg in su il pannello resta fermo sotto la testata e scorre per conto suo:
+              le due colonne scorrono separatamente. */}
+          <div className="flex flex-col rounded-lg border border-azzurro/40 bg-bianco lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)]">
+            <div className="shrink-0 border-b border-ice p-5 pb-4">
+              <p className="etichetta">I tuoi acquisti</p>
+              <h2 className="mt-1 text-xl">Ultimi 12 mesi</h2>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 [scrollbar-width:thin]">
+              <Suspense fallback={<p className="mt-4 text-sm text-slate">Carico le statistiche…</p>}>
+                <Statistiche />
+              </Suspense>
+            </div>
           </div>
         </aside>
       </div>
