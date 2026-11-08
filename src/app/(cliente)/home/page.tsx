@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { Bottone } from "@/components/Bottone";
 import { FotoArticolo } from "@/components/catalogo/SchedaArticolo";
 import { formattaPrezzo, fotoPerMarchio, leggiFamiglie, leggiMarchi } from "@/lib/dati/catalogo";
-import { clientePerCodice, formattaData, storicoCliente } from "@/lib/dati/ordini";
+import { clientePerCodice, formattaData, riepilogo12m, storicoCliente } from "@/lib/dati/ordini";
 import { leggiSessione } from "@/lib/sessione";
 import { aggiungiDaStorico } from "../azioni";
 import { Contenitore } from "@/components/Contenitore";
@@ -51,14 +51,13 @@ async function SezioneTuoiArticoli() {
                     <FotoArticolo articolo={articoloFinto} formato="piccola" />
                   </span>
                   <div className="min-w-0 flex-1 basis-48">
-                    <Link href={`/catalogo/${encodeURIComponent(v.cod_dav)}`} className="block truncate font-semibold hover:underline">
+                    <Link href={`/catalogo/${encodeURIComponent(v.cod_dav)}`} className="block font-semibold leading-snug hover:underline">
                       {v.descrizione}
                     </Link>
+                    {/* I numeri dei 12 mesi stanno nel pannello "I tuoi acquisti" */}
                     <p className="text-xs text-slate">
-                      ultimo acquisto {formattaData(v.ultima_data, { month: "2-digit", year: "numeric" })} · 12 mesi: {v.n_ordini_12m}{" "}
-                      {v.n_ordini_12m === 1 ? "ordine" : "ordini"}, {v.qta_12m} {v.um ?? "conf."}
+                      {v.cod_dav} · ultimo acquisto {formattaData(v.ultima_data, { month: "2-digit", year: "numeric" })}
                       {v.pezzi_confezione ? ` · conf. da ${v.pezzi_confezione}` : ""}
-                      {v.fatturato_12m > 0 ? `, ${formattaPrezzo(v.fatturato_12m)}` : ""}
                     </p>
                   </div>
                   {/* Su telefono i comandi vanno a capo sotto il testo e si allineano a destra */}
@@ -87,6 +86,55 @@ async function SezioneTuoiArticoli() {
         </form>
       )}
     </section>
+  );
+}
+
+/** Pannello statistiche: totali dei 12 mesi e i numeri per articolo (ordini, quantità, spesa). */
+async function Statistiche() {
+  const s = await leggiSessione();
+  if (!s || s.ruolo !== "cliente") redirect("/accedi");
+  const cliente = await clientePerCodice(s.codiceCliente);
+  if (!cliente) redirect("/accedi");
+  const r = await riepilogo12m(cliente.id);
+
+  if (r.articoli.length === 0) {
+    return <p className="mt-4 text-sm text-slate">Nessun acquisto negli ultimi 12 mesi.</p>;
+  }
+  return (
+    <>
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+        <div>
+          <dt className="text-slate">Spesa</dt>
+          <dd className="prezzo text-lg">{formattaPrezzo(r.fatturato)}</dd>
+        </div>
+        <div>
+          <dt className="text-slate">Articoli diversi</dt>
+          <dd className="prezzo text-lg">{r.nArticoli}</dd>
+        </div>
+        <div>
+          <dt className="text-slate">Righe ordinate</dt>
+          <dd className="prezzo text-lg">{r.nOrdini}</dd>
+        </div>
+        <div>
+          <dt className="text-slate">Ultimo acquisto</dt>
+          <dd className="prezzo text-lg">{formattaData(r.ultimaData, { month: "2-digit", year: "numeric" })}</dd>
+        </div>
+      </dl>
+      <p className="etichetta mt-5">Per articolo</p>
+      <ul className="mt-2 divide-y divide-ice text-sm">
+        {r.articoli.map((a) => (
+          <li key={a.cod_dav} className="py-2">
+            <Link href={`/catalogo/${encodeURIComponent(a.cod_dav)}`} className="block leading-snug hover:underline">
+              {a.descrizione}
+            </Link>
+            <p className="text-xs text-slate">
+              {a.n_ordini_12m} {a.n_ordini_12m === 1 ? "ordine" : "ordini"} · {a.qta_12m} {a.um ?? "conf."} · {formattaPrezzo(a.fatturato_12m)}
+            </p>
+          </li>
+        ))}
+      </ul>
+      {r.altri > 0 && <p className="mt-3 text-xs text-slate">e altri {r.altri} articoli.</p>}
+    </>
   );
 }
 
@@ -172,11 +220,13 @@ export default function HomeCliente() {
           </Suspense>
         </div>
 
-        <aside className="hidden lg:block">
-          <div className="sticky top-24 rounded-lg border border-azzurro/40 bg-bianco p-5">
+        <aside className="min-w-0">
+          <div className="rounded-lg border border-azzurro/40 bg-bianco p-5 lg:sticky lg:top-24">
             <p className="etichetta">I tuoi acquisti</p>
             <h2 className="mt-1 text-xl">Ultimi 12 mesi</h2>
-            <p className="mt-4 text-sm text-slate">Qui compariranno fatturato, ripartizione per marchio o famiglia, ultimo ordine e statistiche per articolo.</p>
+            <Suspense fallback={<p className="mt-4 text-sm text-slate">Carico le statistiche…</p>}>
+              <Statistiche />
+            </Suspense>
           </div>
         </aside>
       </div>

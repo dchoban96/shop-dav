@@ -289,6 +289,47 @@ export async function storicoCliente(clienteId: number, limite = 40): Promise<Vo
     });
 }
 
+export type Riepilogo12m = {
+  fatturato: number;
+  nOrdini: number;
+  nArticoli: number;
+  ultimaData: string | null;
+  /** I primi per spesa, con i numeri dei 12 mesi. */
+  articoli: { cod_dav: string; descrizione: string; um: string | null; n_ordini_12m: number; qta_12m: number; fatturato_12m: number }[];
+  /** Quanti altri articoli acquistati non sono in lista. */
+  altri: number;
+};
+
+/** Statistiche degli ultimi 12 mesi dal data.json del cruscotto (storico_acquisti), per il pannello della home. */
+export async function riepilogo12m(clienteId: number, limite = 12): Promise<Riepilogo12m> {
+  const { data, error } = await supabaseAdmin()
+    .from("storico_acquisti")
+    .select("cod_dav, ultima_data, n_ordini_12m, qta_12m, fatturato_12m, articolo:articoli(descrizione_nts, descrizione_pulita, um)")
+    .eq("cliente_id", clienteId)
+    .gt("n_ordini_12m", 0)
+    .order("fatturato_12m", { ascending: false });
+  if (error) throw new Error(`riepilogo12m: ${error.message}`);
+  type Riga = { cod_dav: string; ultima_data: string | null; n_ordini_12m: number; qta_12m: string; fatturato_12m: string; articolo: { descrizione_nts: string; descrizione_pulita: string | null; um: string | null } | { descrizione_nts: string; descrizione_pulita: string | null; um: string | null }[] | null };
+  const righe = (data ?? []) as unknown as Riga[];
+  let fatturato = 0, nOrdini = 0, ultimaData: string | null = null;
+  for (const r of righe) {
+    fatturato += Number(r.fatturato_12m);
+    nOrdini += r.n_ordini_12m;
+    if (r.ultima_data && (!ultimaData || r.ultima_data > ultimaData)) ultimaData = r.ultima_data;
+  }
+  return {
+    fatturato: Math.round(fatturato * 100) / 100,
+    nOrdini,
+    nArticoli: righe.length,
+    ultimaData,
+    articoli: righe.slice(0, limite).map((r) => {
+      const a = uno(r.articolo);
+      return { cod_dav: r.cod_dav, descrizione: a?.descrizione_pulita ?? a?.descrizione_nts ?? r.cod_dav, um: a?.um ?? null, n_ordini_12m: r.n_ordini_12m, qta_12m: Number(r.qta_12m), fatturato_12m: Number(r.fatturato_12m) };
+    }),
+    altri: Math.max(0, righe.length - limite),
+  };
+}
+
 // Consegna --------------------------------------------------------------------
 
 export const GIORNI_SETTIMANA = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"];

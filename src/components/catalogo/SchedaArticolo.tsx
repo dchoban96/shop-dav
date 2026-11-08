@@ -19,14 +19,16 @@ const CLASSI_FOTO: Record<Formato, string> = {
 };
 
 export function FotoArticolo({ articolo, grande = false, formato }: { articolo: Articolo; grande?: boolean; formato?: Formato }) {
-  const classi = CLASSI_FOTO[formato ?? (grande ? "grande" : "card")];
+  const f = formato ?? (grande ? "grande" : "card");
+  const classi = CLASSI_FOTO[f];
   if (articolo.foto_path) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={articolo.foto_path}
         alt={articolo.descrizione_pulita ?? articolo.descrizione_nts}
-        className={`${classi} rounded-md object-contain bg-bianco`}
+        // Nelle card e nelle righe la foto riempie il riquadro; nella scheda si vede intera.
+        className={`${classi} rounded-md bg-bianco ${f === "grande" ? "object-contain" : "object-cover"}`}
       />
     );
   }
