@@ -2,10 +2,12 @@
  * Avvio del connettore: un giro ogni POLL_SECONDI finché il servizio non viene fermato.
  * `--una-volta` fa un solo giro ed esce (prove a mano).
  */
-import { descriviConfig, leggiConfig, VERSIONE } from "./config.js";
+import { join } from "node:path";
+import { CARTELLA, descriviConfig, leggiConfig, VERSIONE } from "./config.js";
 import { inviaAllarme } from "./email.js";
 import { Connettore } from "./giro.js";
 import { Nts } from "./nts.js";
+import { GIORNI_LOG, pulisciLog } from "./pulizia-log.js";
 import { messaggio, registro } from "./registro.js";
 import { Shop } from "./shop.js";
 
@@ -29,7 +31,17 @@ async function main() {
   process.on("SIGTERM", () => ferma("SIGTERM"));
   process.on("SIGBREAK", () => ferma("SIGBREAK"));
 
+  // Registri ruotati da NSSM: si tengono gli ultimi GIORNI_LOG giorni (controllo all'avvio e una volta al giorno).
+  let ultimaPulizia = 0;
+  const pulizia = () => {
+    if (Date.now() - ultimaPulizia < 24 * 60 * 60 * 1000) return;
+    ultimaPulizia = Date.now();
+    const via = pulisciLog(join(CARTELLA, "logs"));
+    if (via.length) registro.info(`Registri più vecchi di ${GIORNI_LOG} giorni cancellati: ${via.length}`);
+  };
+
   do {
+    pulizia();
     await connettore.giro();
     if (unaVolta || fermo) break;
     await new Promise<void>((ok) => {

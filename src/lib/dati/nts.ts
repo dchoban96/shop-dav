@@ -99,8 +99,9 @@ export async function segnaInseritoAMano(ordineId: number, nota: string): Promis
 /**
  * Se il connettore non si fa sentire da più di MINUTI_SILENZIO minuti, manda un'email
  * all'ufficio (al massimo una all'ora). Non fa nulla se il connettore non è mai partito.
- * Lo shop non ha processi in background: si chiama alla conferma di un ordine e
- * all'apertura del cruscotto.
+ * Lo shop non ha processi in background: si chiama alla conferma di un ordine,
+ * all'apertura del cruscotto e ogni 10 minuti da `/api/cron/connettore`
+ * (workflow GitHub `controllo-connettore.yml`), così l'allarme parte anche di notte.
  */
 export async function controllaConnettore(): Promise<Connettore> {
   const c = await leggiConnettore();

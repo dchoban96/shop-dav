@@ -5,7 +5,8 @@
     powershell -ExecutionPolicy Bypass -File .\installa-servizio.ps1 -Nssm C:\nssm\win64\nssm.exe
 
   Il servizio si chiama ShopDavConnettoreNts, parte con Windows, riparte da solo se cade
-  e scrive il registro in .\logs\connettore.log (ruotato a 10 MB).
+  e scrive il registro in .\logs\connettore.log (un file al giorno, o a 10 MB;
+  il connettore cancella da solo i file ruotati piu' vecchi di 30 giorni).
   Rilanciarlo aggiorna la configurazione del servizio senza perdere niente.
 #>
 param(
@@ -39,6 +40,7 @@ if (-not $esiste) {
 & $Nssm set $Nome AppRotateFiles 1
 & $Nssm set $Nome AppRotateOnline 1
 & $Nssm set $Nome AppRotateBytes 10485760
+& $Nssm set $Nome AppRotateSeconds 86400
 & $Nssm set $Nome AppExit Default Restart
 & $Nssm set $Nome AppRestartDelay 10000
 & $Nssm set $Nome AppStopMethodConsole 15000
