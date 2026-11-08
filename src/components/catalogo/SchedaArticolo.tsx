@@ -58,10 +58,10 @@ export function Prezzo({ valore, className }: { valore: number | null; className
   return <span className={`prezzo text-lg ${className ?? ""}`}>{testo}</span>;
 }
 
-type Props = { articolo: Articolo; stato: Disponibilita };
+type Props = { articolo: Articolo; stato: Disponibilita; prezzo: number | null };
 
-/** Riga/card articolo: lista su telefono, card in griglia da sm in su. */
-export function SchedaArticolo({ articolo, stato }: Props) {
+/** Riga/card articolo: lista su telefono, card in griglia da sm in su. `prezzo` è quello del cliente, mai il listino. */
+export function SchedaArticolo({ articolo, stato, prezzo }: Props) {
   const nome = articolo.descrizione_pulita ?? articolo.descrizione_nts;
   return (
     <article className="flex gap-4 rounded-lg border border-azzurro/40 bg-bianco p-3 sm:flex-col sm:p-4">
@@ -83,7 +83,7 @@ export function SchedaArticolo({ articolo, stato }: Props) {
           {articolo.pezzi_confezione ? ` · conf. da ${articolo.pezzi_confezione}` : ""}
         </p>
         <div className="mt-auto flex items-end justify-between gap-2 pt-1">
-          <Prezzo valore={articolo.prezzo_listino} />
+          <Prezzo valore={prezzo} />
           <BadgeDisponibilita stato={stato} />
         </div>
         <form action={aggiungi} className="mt-2 flex items-center gap-2">

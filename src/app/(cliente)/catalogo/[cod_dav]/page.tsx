@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BadgeDisponibilita, FotoArticolo, Prezzo } from "@/components/catalogo/SchedaArticolo";
 import { Bottone } from "@/components/Bottone";
@@ -8,6 +8,8 @@ import { disponibilita, leggiArticolo, nomeMarchio, sogliaEsaurimento } from "@/
 import { aggiungi } from "../../azioni";
 import { Contenitore } from "@/components/Contenitore";
 import { LogoFornitore } from "@/components/LogoFornitore";
+import { clientePerCodice, prezzoCliente } from "@/lib/dati/ordini";
+import { leggiSessione } from "@/lib/sessione";
 
 export const metadata: Metadata = { title: "Articolo" };
 
@@ -15,8 +17,17 @@ type Props = { params: Promise<{ cod_dav: string }> };
 
 async function Dettaglio({ params }: Props) {
   const { cod_dav } = await params;
-  const [articolo, soglia] = await Promise.all([leggiArticolo(decodeURIComponent(cod_dav)), sogliaEsaurimento()]);
+  const s = await leggiSessione();
+  if (!s || s.ruolo !== "cliente") redirect("/accedi");
+  const [articolo, soglia, cliente] = await Promise.all([
+    leggiArticolo(decodeURIComponent(cod_dav)),
+    sogliaEsaurimento(),
+    clientePerCodice(s.codiceCliente),
+  ]);
   if (!articolo) notFound();
+  if (!cliente) redirect("/accedi");
+  // Il cliente vede solo il suo prezzo (accordato, scontato o listino, nell'ordine).
+  const prezzo = await prezzoCliente(cliente.id, articolo.cod_dav);
   const nome = articolo.descrizione_pulita ?? articolo.descrizione_nts;
   const stato = disponibilita(articolo.giacenza, soglia);
 
@@ -67,7 +78,7 @@ async function Dettaglio({ params }: Props) {
         </dl>
 
         <div className="flex items-center justify-between gap-4 border-t border-azzurro/40 pt-4">
-          <Prezzo valore={articolo.prezzo_listino} className="text-2xl" />
+          <Prezzo valore={prezzo?.prezzo_finale ?? null} className="text-2xl" />
           <span className="text-xs text-slate">Prezzo riservato, IVA esclusa</span>
         </div>
 

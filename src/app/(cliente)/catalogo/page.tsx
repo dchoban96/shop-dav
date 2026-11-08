@@ -13,7 +13,10 @@ import {
 } from "@/lib/dati/catalogo";
 import { Contenitore } from "@/components/Contenitore";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { LogoFornitore } from "@/components/LogoFornitore";
+import { clientePerCodice, prezziCliente } from "@/lib/dati/ordini";
+import { leggiSessione } from "@/lib/sessione";
 
 export const metadata: Metadata = { title: "Catalogo" };
 
@@ -33,12 +36,18 @@ async function Risultati({ searchParams }: Props) {
   const ordina: Ordinamento = p.ordina === "vendite" || p.ordina === "codice" ? p.ordina : "nome";
   const pagina = intero(p.pagina) ?? 1;
 
-  const [ris, famiglie, marchi, soglia] = await Promise.all([
+  const s = await leggiSessione();
+  if (!s || s.ruolo !== "cliente") redirect("/accedi");
+  const [ris, famiglie, marchi, soglia, cliente] = await Promise.all([
     cercaArticoli({ q, famiglia, marchio, ordina, pagina }),
     leggiFamiglie(),
     leggiMarchi(),
     sogliaEsaurimento(),
+    clientePerCodice(s.codiceCliente),
   ]);
+  if (!cliente) redirect("/accedi");
+  // Il cliente vede solo il suo prezzo: una chiamata per tutta la pagina.
+  const prezzi = await prezziCliente(cliente.id, ris.articoli.map((a) => a.cod_dav));
 
   const base = { q: q || undefined, famiglia: p.famiglia, marchio: p.marchio, ordina: ordina !== "nome" ? ordina : undefined };
   const marchioSel = marchi.find((m) => m.id === marchio);
@@ -75,7 +84,7 @@ async function Risultati({ searchParams }: Props) {
         <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {ris.articoli.map((a) => (
             <li key={a.cod_dav}>
-              <SchedaArticolo articolo={a} stato={disponibilita(a.giacenza, soglia)} />
+              <SchedaArticolo articolo={a} stato={disponibilita(a.giacenza, soglia)} prezzo={prezzi.get(a.cod_dav)?.prezzo_finale ?? null} />
             </li>
           ))}
         </ul>

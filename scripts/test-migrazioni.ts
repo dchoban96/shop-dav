@@ -79,6 +79,13 @@ async function main() {
   const p5 = await db.query(`select * from prezzo_cliente(1, 'NON_ESISTE')`);
   assert(p5.rows.length === 0, "articolo inesistente → nessuna riga");
 
+  // prezzi_cliente: stessi risultati di prezzo_cliente, in un colpo solo; i codici sconosciuti spariscono
+  const pb = (await db.query<{ cod_dav: string; prezzo_finale: string; origine: string }>(`select * from prezzi_cliente(1, '{A4803,FARMIR,ALTRO,NON_ESISTE}') order by cod_dav`)).rows;
+  assert(pb.length === 3, `prezzi_cliente: ${pb.length} righe invece di 3`);
+  const perCod = Object.fromEntries(pb.map((r) => [r.cod_dav, r]));
+  assert(Number(perCod.A4803.prezzo_finale) === 17.5 && perCod.A4803.origine === "prezzo_accordato", `prezzi_cliente A4803: ${JSON.stringify(perCod.A4803)}`);
+  assert(Number(perCod.FARMIR.prezzo_finale) === 22.8 && Number(perCod.ALTRO.prezzo_finale) === 9, `prezzi_cliente famiglia/generale: ${JSON.stringify(pb)}`);
+
   // conferma_ordine: prezzi copiati riga per riga, totale, storico e mensili aggiornati
   await db.exec(`
     insert into ordini (cliente_id, stato) values (1, 'bozza');
@@ -122,6 +129,13 @@ async function main() {
     negato = true;
   }
   assert(negato, "prezzo_cliente di un altro cliente deve essere negato");
+  let negatoBlocco = false;
+  try {
+    await db.query(`select * from prezzi_cliente(2, '{ALTRO}')`);
+  } catch {
+    negatoBlocco = true;
+  }
+  assert(negatoBlocco, "prezzi_cliente di un altro cliente deve essere negato");
   const mio = (await db.query<P>(`select * from prezzo_cliente(1, 'ALTRO')`)).rows[0];
   assert(mio.origine === "generale", "prezzo_cliente proprio deve funzionare con RLS");
   // ordine proprio: ok; ordine per un altro cliente: negato

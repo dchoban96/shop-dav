@@ -168,6 +168,25 @@ export async function prezzoCliente(clienteId: number, codDav: string): Promise<
   return { listino: num(p.listino), sconto1: Number(p.sconto1 ?? 0), sconto2: Number(p.sconto2 ?? 0), prezzo_accordato: num(p.prezzo_accordato), prezzo_finale: num(p.prezzo_finale) };
 }
 
+export type PrezzoCatalogo = { listino: number | null; prezzo_finale: number | null; origine: string };
+
+/**
+ * Prezzo finale del cliente per una lista di articoli (griglia catalogo, scheda).
+ * Una sola chiamata; gli articoli sconosciuti non compaiono nella mappa.
+ */
+export async function prezziCliente(clienteId: number, codDav: string[]): Promise<Map<string, PrezzoCatalogo>> {
+  const mappa = new Map<string, PrezzoCatalogo>();
+  const codici = [...new Set(codDav)].filter(Boolean);
+  if (codici.length === 0) return mappa;
+  const { data, error } = await supabaseAdmin().rpc("prezzi_cliente", { p_cliente_id: clienteId, p_cod_dav: codici });
+  if (error) throw new Error(`prezziCliente: ${error.message}`);
+  type R = { cod_dav: string; listino: string | null; prezzo_finale: string | null; origine: string };
+  for (const r of (data ?? []) as R[]) {
+    mappa.set(r.cod_dav, { listino: num(r.listino), prezzo_finale: num(r.prezzo_finale), origine: r.origine });
+  }
+  return mappa;
+}
+
 export async function aggiungiAlCarrello(clienteId: number, codDav: string, quantita: number): Promise<void> {
   if (!(quantita > 0)) return;
   const db = supabaseAdmin();

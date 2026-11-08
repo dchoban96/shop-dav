@@ -5,6 +5,9 @@ Migrazioni SQL in `migrations/`, in ordine:
 1. `0001_schema.sql` — tabelle (STRUTTURA, sezione 2)
 2. `0002_rls.sql` — Row Level Security: funzioni `cliente_corrente()` e `is_admin()`, policy per tabella
 3. `0003_funzioni.sql` — `descrizione_pulita`, `disponibilita`, `prezzo_cliente`, trigger `aggiornato_il`
+4. `0004_viste_catalogo.sql` — viste `v_marchi_catalogo`, `v_famiglie_catalogo`
+5. `0005_ordini.sql` — carrello, `conferma_ordine`
+6. `0006_prezzi_cliente.sql` — `prezzi_cliente` (prezzi di una lista di articoli in un colpo solo)
 
 ## Applicarle
 
