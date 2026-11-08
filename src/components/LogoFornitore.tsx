@@ -40,6 +40,10 @@ const TESTO: Record<Formato, string> = {
 
 export function LogoFornitore({ nome, logo, formato = "riga", mono = false, className }: Props) {
   const inline = formato === "inline";
+  // Nessun marchio (fornitore assente o tolto dal sito): scatola vuota, così la colonna resta allineata.
+  if (!logo && !nome.trim()) {
+    return inline ? null : <span aria-hidden="true" className={`bg-bianco ${SCATOLA[formato]} ${className ?? ""}`} />;
+  }
   if (!logo) {
     if (inline) return <span className={`${TESTO.inline} ${className ?? ""}`}>{nome}</span>;
     return (

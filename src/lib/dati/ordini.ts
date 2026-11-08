@@ -93,11 +93,11 @@ export const ETICHETTA_CLIENTE: Record<StatoOrdine, string> = {
   annullato: "Annullato",
 };
 
-type Forn = { nome_breve: string | null; nome_nts: string; logo_path: string | null };
+type Forn = { nome_breve: string | null; nome_nts: string; logo_path: string | null; attivo: boolean };
 
 const CAMPI_RIGA =
   "id, cod_dav, descrizione, quantita, um, prezzo_listino, sconto1, sconto2, prezzo_accordato, prezzo_finale, note, " +
-  "articolo:articoli(foto_path, famiglia:famiglie(nome), fornitore:fornitori(nome_breve, nome_nts, logo_path))";
+  "articolo:articoli(foto_path, famiglia:famiglie(nome), fornitore:fornitori(nome_breve, nome_nts, logo_path, attivo))";
 
 type RigaDb = {
   id: number; cod_dav: string; descrizione: string; quantita: string | number; um: string | null;
@@ -107,10 +107,12 @@ type RigaDb = {
 
 const num = (v: string | number | null | undefined): number | null => (v === null || v === undefined ? null : Number(v));
 const uno = <T>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
+/** Fornitore disattivato = marchio tolto dal sito: la riga resta, senza nome né logo. */
+const marchioVisibile = (f: Forn | null): Forn | null => (f?.attivo ? f : null);
 
 function normalizzaRiga(r: RigaDb): RigaOrdine {
   const fam = uno(r.articolo?.famiglia);
-  const forn = uno(r.articolo?.fornitore);
+  const forn = marchioVisibile(uno(r.articolo?.fornitore));
   return {
     id: r.id, cod_dav: r.cod_dav, descrizione: r.descrizione, quantita: Number(r.quantita), um: r.um,
     prezzo_listino: num(r.prezzo_listino), sconto1: Number(r.sconto1 ?? 0), sconto2: Number(r.sconto2 ?? 0),
@@ -310,7 +312,7 @@ export async function ordinePerId(clienteId: number, id: number): Promise<{ ordi
 export async function storicoCliente(clienteId: number, limite = 40): Promise<VoceStorico[]> {
   const { data, error } = await supabaseAdmin()
     .from("storico_acquisti")
-    .select("cod_dav, ultima_data, ultima_quantita, n_ordini_12m, qta_12m, fatturato_12m, articolo:articoli(descrizione_nts, descrizione_pulita, um, pezzi_confezione, foto_path, attivo, famiglia:famiglie(nome), fornitore:fornitori(nome_breve, nome_nts, logo_path))")
+    .select("cod_dav, ultima_data, ultima_quantita, n_ordini_12m, qta_12m, fatturato_12m, articolo:articoli(descrizione_nts, descrizione_pulita, um, pezzi_confezione, foto_path, attivo, famiglia:famiglie(nome), fornitore:fornitori(nome_breve, nome_nts, logo_path, attivo))")
     .eq("cliente_id", clienteId)
     .order("n_ordini_12m", { ascending: false })
     .order("ultima_data", { ascending: false })
@@ -321,7 +323,7 @@ export async function storicoCliente(clienteId: number, limite = 40): Promise<Vo
     .filter((r) => r.articolo?.attivo)
     .map((r) => {
       const fam = uno(r.articolo?.famiglia);
-      const forn = uno(r.articolo?.fornitore);
+      const forn = marchioVisibile(uno(r.articolo?.fornitore));
       return {
         cod_dav: r.cod_dav, descrizione: r.articolo?.descrizione_pulita ?? r.articolo?.descrizione_nts ?? r.cod_dav, um: r.articolo?.um ?? null, pezzi_confezione: num(r.articolo?.pezzi_confezione),
         famiglia: fam?.nome ?? null, marchio: forn?.nome_breve || forn?.nome_nts || null, logo_marchio: forn?.logo_path ?? null, foto_path: r.articolo?.foto_path ?? null,

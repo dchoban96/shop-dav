@@ -46,7 +46,7 @@ async function SezioneTuoiArticoli() {
               };
               return (
                 <li key={v.cod_dav} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
-                  <LogoFornitore nome={v.marchio ?? "Marchio"} logo={v.logo_marchio} formato="riga" />
+                  <LogoFornitore nome={v.marchio ?? ""} logo={v.logo_marchio} formato="riga" />
                   <span className="hidden sm:block">
                     <FotoArticolo articolo={articoloFinto} formato="piccola" />
                   </span>

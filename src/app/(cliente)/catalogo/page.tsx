@@ -38,25 +38,22 @@ async function Risultati({ searchParams }: Props) {
 
   const s = await leggiSessione();
   if (!s || s.ruolo !== "cliente") redirect("/accedi");
-  const [ris, famiglie, marchi, soglia, cliente] = await Promise.all([
-    cercaArticoli({ q, famiglia, marchio, ordina, pagina }),
-    leggiFamiglie(),
-    leggiMarchi(),
-    sogliaEsaurimento(),
-    clientePerCodice(s.codiceCliente),
-  ]);
+  const [famiglie, marchi, soglia, cliente] = await Promise.all([leggiFamiglie(), leggiMarchi(), sogliaEsaurimento(), clientePerCodice(s.codiceCliente)]);
   if (!cliente) redirect("/accedi");
+  // Un marchio tolto dal sito non filtra più: un vecchio link mostra tutto il catalogo.
+  const marchioValido = marchi.some((m) => m.id === marchio) ? marchio : undefined;
+  const ris = await cercaArticoli({ q, famiglia, marchio: marchioValido, ordina, pagina });
   // Il cliente vede solo il suo prezzo: una chiamata per tutta la pagina.
   const prezzi = await prezziCliente(cliente.id, ris.articoli.map((a) => a.cod_dav));
 
-  const base = { q: q || undefined, famiglia: p.famiglia, marchio: p.marchio, ordina: ordina !== "nome" ? ordina : undefined };
-  const marchioSel = marchi.find((m) => m.id === marchio);
+  const base = { q: q || undefined, famiglia: p.famiglia, marchio: marchioValido ? p.marchio : undefined, ordina: ordina !== "nome" ? ordina : undefined };
+  const marchioSel = marchi.find((m) => m.id === marchioValido);
   const nomeMarchioSel = marchioSel ? marchioSel.nome_breve || marchioSel.nome_nts : null;
   const titolo = famiglie.find((f) => f.id === famiglia)?.nome ?? nomeMarchioSel ?? (q ? `Risultati per “${q}”` : "Tutti gli articoli");
 
   return (
     <>
-      <FiltriCatalogo q={q} famiglia={famiglia} marchio={marchio} ordina={ordina} famiglie={famiglie} marchi={marchi} />
+      <FiltriCatalogo q={q} famiglia={famiglia} marchio={marchioValido} ordina={ordina} famiglie={famiglie} marchi={marchi} />
       <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {marchioSel && nomeMarchioSel && <LogoFornitore nome={nomeMarchioSel} logo={marchioSel.logo_path} formato="riga" />}

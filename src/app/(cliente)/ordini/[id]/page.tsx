@@ -75,7 +75,7 @@ async function Dettaglio({ params, searchParams }: Props) {
             <tr key={r.id} className="border-b border-ice align-top">
               <td className="py-2 pr-2">
                 <div className="flex items-start gap-3">
-                  <LogoFornitore nome={r.marchio ?? "Marchio"} logo={r.logo_marchio} formato="compatto" />
+                  <LogoFornitore nome={r.marchio ?? ""} logo={r.logo_marchio} formato="compatto" />
                   <div className="min-w-0">
                     <Link href={`/catalogo/${encodeURIComponent(r.cod_dav)}`} className="font-semibold hover:underline">
                       {r.descrizione}

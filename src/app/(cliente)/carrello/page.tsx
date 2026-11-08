@@ -40,7 +40,7 @@ function RigaCarrello({ riga }: { riga: RigaOrdine }) {
   const subtotale = riga.prezzo_finale === null ? null : formattaPrezzo(riga.prezzo_finale * riga.quantita);
   return (
     <li className="flex gap-3 rounded-lg border border-azzurro/40 bg-bianco p-3 sm:gap-4 sm:p-4">
-      <LogoFornitore nome={riga.marchio ?? "Marchio"} logo={riga.logo_marchio} formato="riga" />
+      <LogoFornitore nome={riga.marchio ?? ""} logo={riga.logo_marchio} formato="riga" />
       <Link href={`/catalogo/${encodeURIComponent(riga.cod_dav)}`} className="hidden shrink-0 sm:block">
         <FotoArticolo articolo={articoloFinto} formato="piccola" />
       </Link>

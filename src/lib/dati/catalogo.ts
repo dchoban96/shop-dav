@@ -49,11 +49,19 @@ export type Ricerca = {
 
 const CAMPI_ARTICOLO =
   "cod_dav, descrizione_nts, descrizione_pulita, um, pezzi_confezione, prezzo_listino, foto_path, scheda_pdf_path, top80, " +
-  "famiglia:famiglie(id, nome), fornitore:fornitori(id, nome_breve, nome_nts, logo_path), giacenze(quantita)";
+  "famiglia:famiglie(id, nome), fornitore:fornitori(id, nome_breve, nome_nts, logo_path, attivo), giacenze(quantita)";
+
+type FornitoreDb = NonNullable<Articolo["fornitore"]> & { attivo: boolean };
+
+/** Marchio da mostrare: null se il fornitore è disattivato (marchio tolto dal sito, l'articolo resta in vendita). */
+function marchioVisibile(f: FornitoreDb | null): Articolo["fornitore"] {
+  if (!f || !f.attivo) return null;
+  return { id: f.id, nome_breve: f.nome_breve, nome_nts: f.nome_nts, logo_path: f.logo_path };
+}
 
 type RigaDb = Omit<Articolo, "giacenza" | "famiglia" | "fornitore"> & {
   famiglia: Articolo["famiglia"] | Articolo["famiglia"][];
-  fornitore: Articolo["fornitore"] | Articolo["fornitore"][];
+  fornitore: FornitoreDb | FornitoreDb[] | null;
   giacenze: { quantita: number } | { quantita: number }[] | null;
 };
 
@@ -71,7 +79,7 @@ function normalizza(r: RigaDb): Articolo {
     scheda_pdf_path: r.scheda_pdf_path,
     top80: r.top80,
     famiglia: uno(r.famiglia),
-    fornitore: uno(r.fornitore),
+    fornitore: marchioVisibile(uno(r.fornitore)),
     giacenza: g ? Number(g.quantita) : null,
   };
 }
