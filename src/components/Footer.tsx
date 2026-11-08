@@ -18,8 +18,10 @@ export function Footer() {
           <p className="etichetta">Contatti</p>
           <ul className="mt-3 space-y-1 text-sm">
             <li>{azienda.ragioneSociale}</li>
-            {azienda.indirizzo && <li>{azienda.indirizzo}</li>}
-            <li>{azienda.sede}</li>
+            <li>{azienda.indirizzo}</li>
+            <li>
+              {azienda.cap} {azienda.sede}
+            </li>
             <li>
               <a href={`mailto:${azienda.email}`} className="underline underline-offset-2">
                 {azienda.email}
@@ -27,9 +29,24 @@ export function Footer() {
             </li>
             {azienda.telefonoOrdini && (
               <li>
-                Ordini:{" "}
-                <a href={`tel:${azienda.telefonoOrdini}`} className="underline underline-offset-2">
+                Tel.{" "}
+                <a href={`tel:${azienda.telefonoOrdini.replace(/\s/g, "")}`} className="underline underline-offset-2">
                   {azienda.telefonoOrdini}
+                </a>
+              </li>
+            )}
+            {azienda.whatsapp && (
+              <li>
+                WhatsApp{" "}
+                <a href={`https://wa.me/${azienda.whatsapp.replace(/\D/g, "")}`} className="underline underline-offset-2">
+                  {azienda.whatsapp}
+                </a>
+              </li>
+            )}
+            {azienda.instagram && (
+              <li>
+                <a href={`https://www.instagram.com/${azienda.instagram}/`} className="underline underline-offset-2" rel="noopener">
+                  Instagram @{azienda.instagram}
                 </a>
               </li>
             )}
@@ -57,7 +74,7 @@ export function Footer() {
       <div className="border-t border-azzurro/40">
         <Contenitore className="py-4">
           <p className="text-xs text-slate">
-            © {ANNO} {azienda.ragioneSociale} · {azienda.nomeEsteso}
+            © {ANNO} {azienda.ragioneSociale} · {azienda.nomeEsteso} · P. IVA {azienda.partitaIva} · Codice univoco {azienda.codiceUnivoco}
           </p>
         </Contenitore>
       </div>
