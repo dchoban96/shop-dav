@@ -105,8 +105,8 @@ function normalizzaOrdine(o: Record<string, unknown>): Ordine {
 
 // Clienti ---------------------------------------------------------------------
 
-/** Cliente per codice NTS; in demo, se non esiste, viene creato marcato `demo`. */
-export async function clientePerCodice(codice: string, creaDemo = true): Promise<Cliente | null> {
+/** Cliente per codice NTS. Con `creaDemo`, se non esiste viene creato marcato `demo` (solo dal login). */
+export async function clientePerCodice(codice: string, creaDemo = false): Promise<Cliente | null> {
   const db = supabaseAdmin();
   const campi = "id, codice_nts, ragione_sociale, email, giorni_consegna, demo";
   const { data, error } = await db.from("clienti").select(campi).eq("codice_nts", codice).maybeSingle();

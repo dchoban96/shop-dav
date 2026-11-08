@@ -1,10 +1,12 @@
 /**
  * Sessione: cookie firmato (HMAC) letto solo lato server, con ruolo `cliente` o `admin`.
  *
- * ACCESSO DEMO CLIENTE (provvisorio, fino a Supabase Auth con invito): codice cliente
+ * ACCESSO CLIENTE (provvisorio, fino a Supabase Auth con invito): codice cliente NTS
  * usato sia come login sia come password.
- * - In produzione sono accettati solo i codici elencati in DEMO_CODICI_CLIENTE.
- * - In sviluppo, senza quella variabile, va bene qualsiasi codice di 3–12 caratteri.
+ * - Entra chi esiste nella tabella `clienti` con `demo = false` (anagrafica importata da NTS).
+ * - In più entrano i codici elencati in DEMO_CODICI_CLIENTE: per loro il cliente viene creato
+ *   al volo, marcato `demo`, e gli ordini non partono via email.
+ * - In sviluppo, senza quella variabile, qualsiasi codice di 3–12 caratteri vale come demo.
  *
  * ACCESSO ADMIN (ufficio DAV): una password unica in ADMIN_PASSWORD (minimo 12 caratteri).
  * Senza quella variabile l'area admin resta chiusa, anche in sviluppo.
@@ -49,8 +51,13 @@ export function normalizzaCodice(input: unknown): string {
     .toUpperCase();
 }
 
+export function formatoCodiceValido(codice: string): boolean {
+  return /^[A-Z0-9._-]{3,12}$/.test(codice);
+}
+
+/** Vero se il codice è uno di quelli demo (lista DEMO_CODICI_CLIENTE; in sviluppo, senza lista, tutti). */
 export function codiceDemoValido(codice: string): boolean {
-  if (!/^[A-Z0-9._-]{3,12}$/.test(codice)) return false;
+  if (!formatoCodiceValido(codice)) return false;
   const lista = (process.env.DEMO_CODICI_CLIENTE ?? "")
     .split(",")
     .map((c) => c.trim().toUpperCase())
@@ -104,7 +111,7 @@ export async function leggiSessione(): Promise<Sessione | null> {
   const due = testa.indexOf(":");
   const ruolo: Ruolo = due > 0 && testa.slice(0, due) === "admin" ? "admin" : "cliente";
   const id = due > 0 ? testa.slice(due + 1) : testa;
-  return { codiceCliente: id, demo: ruolo === "cliente", ruolo };
+  return { codiceCliente: id, demo: ruolo === "cliente" && codiceDemoValido(id), ruolo };
 }
 
 export async function leggiSessioneAdmin(): Promise<Sessione | null> {

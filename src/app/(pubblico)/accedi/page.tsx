@@ -15,7 +15,7 @@ async function MessaggioErrore({ searchParams }: Props) {
   if (!errore) return null;
   return (
     <p role="alert" className="rounded-md border border-navy bg-ice px-4 py-3 text-sm">
-      Codice cliente o password non validi. Nella versione demo la password è il codice cliente.
+      Codice cliente o password non validi. Per ora la password è il tuo codice cliente.
     </p>
   );
 }
