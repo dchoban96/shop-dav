@@ -116,10 +116,11 @@ export default function Home() {
       <Sezione etichetta="Contatti" titolo="Parliamo di persona">
         <div className="grid gap-6 md:grid-cols-2">
           <div className="text-slate">
+            <p>{azienda.ragioneSociale}</p>
             <p>
-              {azienda.ragioneSociale}, {azienda.sede}.
+              {azienda.indirizzo}, {azienda.cap} {azienda.sede}
             </p>
-            <p className="mt-1">{azienda.zona}.</p>
+            <p className="mt-3">{azienda.zona}.</p>
           </div>
           <div className="space-y-2">
             <p>
@@ -130,9 +131,25 @@ export default function Home() {
             </p>
             {azienda.telefonoOrdini && (
               <p>
-                <span className="etichetta mr-2">Ordini</span>
-                <a href={`tel:${azienda.telefonoOrdini}`} className="underline underline-offset-2">
+                <span className="etichetta mr-2">Telefono</span>
+                <a href={`tel:${azienda.telefonoOrdini.replace(/\s/g, "")}`} className="underline underline-offset-2">
                   {azienda.telefonoOrdini}
+                </a>
+              </p>
+            )}
+            {azienda.whatsapp && (
+              <p>
+                <span className="etichetta mr-2">WhatsApp</span>
+                <a href={`https://wa.me/${azienda.whatsapp.replace(/\D/g, "")}`} className="underline underline-offset-2">
+                  {azienda.whatsapp}
+                </a>
+              </p>
+            )}
+            {azienda.instagram && (
+              <p>
+                <span className="etichetta mr-2">Instagram</span>
+                <a href={`https://www.instagram.com/${azienda.instagram}/`} className="underline underline-offset-2" rel="noopener">
+                  @{azienda.instagram}
                 </a>
               </p>
             )}
