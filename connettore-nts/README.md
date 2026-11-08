@@ -60,11 +60,30 @@ Connettore (ogni 30 s)      ──► controlli ──► frontiera NTS ──�
    powershell -ExecutionPolicy Bypass -File .\installa-servizio.ps1 -Nssm C:\nssm\win64\nssm.exe
    ```
 
+## Allarme connettore fermo (una volta, sul sito)
+
+Lo shop non ha processi in background: per accorgersi che il connettore è fermo anche quando nessuno usa il
+portale, il workflow `.github/workflows/controllo-connettore.yml` chiama ogni 10 minuti `/api/cron/connettore`.
+
+1. Inventare una chiave lunga e casuale (almeno 32 caratteri) e salvarla nel gestore password.
+2. GitHub → repository `shop-dav` → *Settings* → *Secrets and variables* → *Actions* → *New repository secret*:
+   nome `CRON_SECRET`, valore la chiave. Controllare che esista anche `APP_URL` (indirizzo del sito).
+3. *Actions* → "Build e deploy su Cloudflare" → *Run workflow* su `main`: copia `CRON_SECRET` nel Worker.
+4. *Actions* → "Controllo connettore NTS" → *Run workflow*: nel log deve comparire una riga come
+   `{"connettore":"attivo","minuti_dall_ultimo_giro":0}` (oppure `"mai_partito"` se il connettore non è ancora installato).
+
+Senza `CRON_SECRET` il controllo viene saltato e l'allarme parte solo alla conferma di un ordine o all'apertura
+del cruscotto. GitHub può ritardare gli avvii programmati di qualche minuto.
+
 ## Uso quotidiano
 
 - **Registro**: `logs\connettore.log` nella cartella del connettore. Una riga per evento.
+  Ogni giorno (o a 10 MB) il file viene archiviato come `connettore-AAAAMMGGThhmmss.log`;
+  il connettore cancella da solo gli archivi più vecchi di 30 giorni.
 - **Nel portale**: cruscotto ufficio → riquadro "Connettore NTS" (ultimo giro, modalità) e "Da controllare in NTS".
-  Se il connettore non si fa sentire per più di 5 minuti il riquadro diventa rosso e parte un'email all'ufficio.
+  Se il connettore non si fa sentire per più di 5 minuti il riquadro diventa rosso e parte un'email all'ufficio
+  (al massimo una all'ora). Il controllo gira **ogni 10 minuti anche di notte e nel weekend** grazie al workflow
+  GitHub "Controllo connettore NTS" (vedi *Allarme connettore fermo* sotto).
 - **Ordine in errore o da verificare**: arriva un'email con il motivo. Nel dettaglio ordine del portale:
   - *Reinvia* (solo errori dei controlli, dopo aver corretto la causa);
   - *Segna inserito a mano* (dopo averlo inserito o trovato in NTS, con una nota);
