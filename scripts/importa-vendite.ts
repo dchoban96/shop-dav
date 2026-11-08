@@ -101,19 +101,23 @@ async function main() {
   type Agg = { ultimoM: number; qUlt: number; nUlt: number; vUlt: number; primoM: number; n12: number; q12: number; v12: number; nTot: number; qTot: number; vTot: number };
   const perCoppia = new Map<string, Agg>(); // "c|r"
   const listino = new Map<number, { m: number; prezzo: number }>(); // r → ultimo listino unitario
-  const mensili: { c: number; r: number; m: number; q: number; v: number; n: number }[] = [];
+  // Il cubo ha una riga per cliente × articolo × mese × unità di misura: qui si somma per mese.
+  const mensiliPerChiave = new Map<string, { c: number; r: number; m: number; q: number; v: number; n: number }>();
 
   for (let i = 0; i < righe; i++) {
     const r = cube.r[i];
     if (articoliFuori.has(r)) continue;
     const c = cube.c[i], m = cube.m[i], q = cube.q[i], v = cube.v[i], l = cube.l[i], n = cube.n[i];
-    mensili.push({ c, r, m, q, v, n });
+    const km = `${c}|${r}|${m}`;
+    const mm = mensiliPerChiave.get(km);
+    if (mm) { mm.q += q; mm.v += v; mm.n += n; } else mensiliPerChiave.set(km, { c, r, m, q, v, n });
     const k = `${c}|${r}`;
     const a = perCoppia.get(k);
     if (!a) {
       perCoppia.set(k, { ultimoM: m, qUlt: q, nUlt: n, vUlt: v, primoM: m, n12: m >= soglia12 ? n : 0, q12: m >= soglia12 ? q : 0, v12: m >= soglia12 ? v : 0, nTot: n, qTot: q, vTot: v });
     } else {
       if (m > a.ultimoM) { a.ultimoM = m; a.qUlt = q; a.nUlt = n; a.vUlt = v; }
+      else if (m === a.ultimoM) { a.qUlt += q; a.nUlt += n; a.vUlt += v; }
       if (m < a.primoM) a.primoM = m;
       if (m >= soglia12) { a.n12 += n; a.q12 += q; a.v12 += v; }
       a.nTot += n; a.qTot += q; a.vTot += v;
@@ -123,6 +127,7 @@ async function main() {
       if (!att || m > att.m) listino.set(r, { m, prezzo: l / q });
     }
   }
+  const mensili = [...mensiliPerChiave.values()];
   console.log(`Coppie cliente×articolo: ${perCoppia.size}; righe mensili: ${mensili.length}; articoli con listino ricavabile: ${listino.size}`);
 
   if (dryRun) {
