@@ -12,6 +12,7 @@
     "migra": "tsx scripts/migra.ts",
     "foto": "tsx scripts/carica-foto.ts",
     "vendite": "tsx scripts/importa-vendite.ts",
+    "listino": "tsx scripts/importa-listino.ts",
     "dev:vinext": "vite dev --port 3001",
     "build:vinext": "vite build",
     "start:vinext": "vite preview",

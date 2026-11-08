@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { IconaMeno, IconaPiu } from "@/components/Icone";
+import { descriviUm } from "@/lib/unita";
 
 type Props = {
   /** Nome del campo inviato dal form (es. `qta:COD`). */
@@ -52,7 +53,11 @@ export function Quantita({ name, id, iniziale, min = 0, etichetta, um }: Props) 
       <button type="button" onClick={() => cambia(1)} className={`${tondo} bg-verde hover:bg-[#25714a]`} aria-label={`Una in più: ${etichetta}`}>
         <IconaPiu />
       </button>
-      {um && <span className="etichetta w-10 text-center normal-case tracking-normal">{um}</span>}
+      {um && (
+        <abbr title={descriviUm(um) ?? undefined} className="etichetta w-10 text-center normal-case tracking-normal no-underline">
+          {um}
+        </abbr>
+      )}
     </div>
   );
 }
