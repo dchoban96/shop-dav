@@ -12,6 +12,8 @@ import {
   type Ordinamento,
 } from "@/lib/dati/catalogo";
 import { Contenitore } from "@/components/Contenitore";
+import Link from "next/link";
+import { LogoFornitore } from "@/components/LogoFornitore";
 
 export const metadata: Metadata = { title: "Catalogo" };
 
@@ -39,19 +41,34 @@ async function Risultati({ searchParams }: Props) {
   ]);
 
   const base = { q: q || undefined, famiglia: p.famiglia, marchio: p.marchio, ordina: ordina !== "nome" ? ordina : undefined };
-  const titolo =
-    famiglie.find((f) => f.id === famiglia)?.nome ??
-    (marchi.find((m) => m.id === marchio)?.nome_breve || marchi.find((m) => m.id === marchio)?.nome_nts) ??
-    (q ? `Risultati per “${q}”` : "Tutti gli articoli");
+  const marchioSel = marchi.find((m) => m.id === marchio);
+  const nomeMarchioSel = marchioSel ? marchioSel.nome_breve || marchioSel.nome_nts : null;
+  const titolo = famiglie.find((f) => f.id === famiglia)?.nome ?? nomeMarchioSel ?? (q ? `Risultati per “${q}”` : "Tutti gli articoli");
 
   return (
     <>
       <FiltriCatalogo q={q} famiglia={famiglia} marchio={marchio} ordina={ordina} famiglie={famiglie} marchi={marchi} />
-      <div className="mt-8 flex items-baseline justify-between gap-4">
-        <h2 className="text-2xl">{titolo}</h2>
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          {marchioSel && nomeMarchioSel && <LogoFornitore nome={nomeMarchioSel} logo={marchioSel.logo_path} formato="riga" />}
+          <div>
+            {marchioSel && (
+              <p className="text-xs text-slate">
+                <Link href="/marchi" className="hover:underline">
+                  Tutti i marchi
+                </Link>{" "}
+                / {nomeMarchioSel}
+              </p>
+            )}
+            <h2 className="text-2xl">{titolo}</h2>
+          </div>
+        </div>
+        <p className="text-sm text-slate">
+          {ris.totale} {ris.totale === 1 ? "articolo" : "articoli"}
+        </p>
       </div>
       {ris.articoli.length === 0 ? (
-        <p className="mt-6 rounded-md bg-ice px-4 py-6 text-center text-sm text-slate">
+        <p className="mt-6 rounded-lg border border-azzurro/40 bg-bianco px-4 py-6 text-center text-sm text-slate">
           Nessun articolo trovato. Prova con meno parole o togli un filtro.
         </p>
       ) : (

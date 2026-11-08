@@ -8,10 +8,10 @@
  * Non ridisegnare, non ricolorare, non deformare: usare i file così come sono.
  */
 
-type EmblemaProps = { size?: number; className?: string; title?: string };
+type EmblemaProps = { size?: number; className?: string; title?: string; bianco?: boolean };
 
-export function Emblema({ size = 40, className, title = "Emblema DAV" }: EmblemaProps) {
-  const src = size >= 240 ? "/brand/emblema.svg" : "/brand/emblema-piccolo.svg";
+export function Emblema({ size = 40, className, title = "Emblema DAV", bianco = false }: EmblemaProps) {
+  const src = bianco ? "/brand/emblema-piccolo-bianco.svg" : size >= 240 ? "/brand/emblema.svg" : "/brand/emblema-piccolo.svg";
   return <img src={src} alt={title} width={size} height={size} className={className} />;
 }
 

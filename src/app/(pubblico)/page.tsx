@@ -38,7 +38,7 @@ async function Marchi() {
   await connection();
   const partner = await leggiPartner();
   if (partner.length === 0) return null;
-  const marchi = partner.map((p) => ({ id: p.id, nome: p.nome_breve ?? p.nome_nts, logo: p.logo_path, href: "/partner" }));
+  const marchi = partner.map((p) => ({ id: p.id, nome: p.nome_breve ?? p.nome_nts, immagine: p.logo_path, href: "/partner" }));
   return <ScaffaleMarchi marchi={marchi} mono className="mt-8" />;
 }
 

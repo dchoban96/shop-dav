@@ -1,34 +1,39 @@
 import Link from "next/link";
-import { Logo } from "./Logo";
+import { Contenitore } from "./Contenitore";
+import { Emblema } from "./Logo";
 import { azienda, navigazionePubblica } from "@/lib/azienda";
-import { Contenitore } from "@/components/Contenitore";
 
 const ANNO = new Date().getFullYear();
+const link = "hover:underline underline-offset-2";
 
+/** Piè di pagina pubblico: fascia navy (superficie grande ammessa dalle linee guida), testo bianco e azzurro. */
 export function Footer() {
   return (
-    <footer className="mt-auto border-t border-ice bg-ice">
-      <Contenitore className="grid gap-8 py-10 md:grid-cols-3">
+    <footer className="mt-auto bg-navy text-bianco">
+      <Contenitore className="grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
-          <Logo />
-          <p className="mt-4 max-w-xs text-sm text-slate">{azienda.descrizioneBreve}</p>
+          <span className="flex items-center gap-3">
+            <Emblema size={40} bianco />
+            <span className="font-serif text-2xl">{azienda.nomeBreve}</span>
+          </span>
+          <p className="mt-4 max-w-xs text-sm leading-relaxed text-azzurro">{azienda.descrizioneBreve}</p>
         </div>
 
         <div>
-          <p className="etichetta">Contatti</p>
-          <ul className="mt-3 space-y-1 text-sm">
+          <p className="etichetta text-azzurro">Contatti</p>
+          <ul className="mt-3 space-y-1.5 text-sm">
             <li>{azienda.ragioneSociale}</li>
             {azienda.indirizzo && <li>{azienda.indirizzo}</li>}
             <li>{azienda.sede}</li>
             <li>
-              <a href={`mailto:${azienda.email}`} className="underline underline-offset-2">
+              <a href={`mailto:${azienda.email}`} className={link}>
                 {azienda.email}
               </a>
             </li>
             {azienda.telefonoOrdini && (
               <li>
                 Ordini:{" "}
-                <a href={`tel:${azienda.telefonoOrdini}`} className="underline underline-offset-2">
+                <a href={`tel:${azienda.telefonoOrdini}`} className={link}>
                   {azienda.telefonoOrdini}
                 </a>
               </li>
@@ -37,26 +42,26 @@ export function Footer() {
         </div>
 
         <div>
-          <p className="etichetta">Sito</p>
-          <ul className="mt-3 space-y-1 text-sm">
+          <p className="etichetta text-azzurro">Sito</p>
+          <ul className="mt-3 space-y-1.5 text-sm">
             {navigazionePubblica.map((voce) => (
               <li key={voce.href}>
-                <Link href={voce.href} className="hover:underline">
+                <Link href={voce.href} className={link}>
                   {voce.label}
                 </Link>
               </li>
             ))}
             <li>
-              <Link href="/accedi" className="hover:underline">
+              <Link href="/accedi" className={link}>
                 Area clienti
               </Link>
             </li>
           </ul>
         </div>
       </Contenitore>
-      <div className="border-t border-azzurro/40">
+      <div className="border-t border-bianco/15">
         <Contenitore className="py-4">
-          <p className="text-xs text-slate">
+          <p className="text-xs text-azzurro">
             © {ANNO} {azienda.ragioneSociale} · {azienda.nomeEsteso}
           </p>
         </Contenitore>

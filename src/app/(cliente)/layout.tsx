@@ -24,7 +24,7 @@ async function Protetto({ children }: { children: ReactNode }) {
   return (
     <>
       <HeaderCliente codiceCliente={cliente.codice_nts} ragioneSociale={cliente.ragione_sociale} demo={sessione.demo || cliente.demo} nelCarrello={nelCarrello} />
-      <main className="flex-1 pb-20 md:pb-0">{children}</main>
+      <main className="flex-1 bg-ice pb-20 md:pb-0">{children}</main>
     </>
   );
 }

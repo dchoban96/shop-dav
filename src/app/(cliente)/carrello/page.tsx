@@ -36,7 +36,7 @@ function RigaCarrello({ riga }: { riga: RigaOrdine }) {
   const prezzo = formattaPrezzo(riga.prezzo_finale);
   const subtotale = riga.prezzo_finale === null ? null : formattaPrezzo(riga.prezzo_finale * riga.quantita);
   return (
-    <li className="flex gap-3 rounded-lg border border-azzurro/40 p-3 sm:gap-4 sm:p-4">
+    <li className="flex gap-3 rounded-lg border border-azzurro/40 bg-bianco p-3 sm:gap-4 sm:p-4">
       <LogoFornitore nome={riga.marchio ?? "Marchio"} logo={riga.logo_marchio} formato="riga" />
       <Link href={`/catalogo/${encodeURIComponent(riga.cod_dav)}`} className="hidden shrink-0 sm:block">
         <FotoArticolo articolo={articoloFinto} formato="piccola" />
@@ -122,7 +122,7 @@ async function Contenuto({ searchParams }: Props) {
 
   if (righe.length === 0) {
     return (
-      <div className="mt-8 rounded-lg bg-ice px-6 py-10 text-center">
+      <div className="mt-8 rounded-lg border border-azzurro/40 bg-bianco px-6 py-10 text-center">
         <p className="text-lg">Il carrello è vuoto.</p>
         <p className="mt-2 text-sm text-slate">Parti dai tuoi articoli abituali in home o cerca nel catalogo.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -149,7 +149,7 @@ async function Contenuto({ searchParams }: Props) {
         ))}
       </ul>
 
-      <form action={conferma} className="h-fit rounded-lg border border-azzurro/40 p-5 lg:sticky lg:top-24">
+      <form action={conferma} className="h-fit rounded-lg border border-azzurro/40 bg-bianco p-5 lg:sticky lg:top-24">
         <h2 className="text-2xl">Conferma ordine</h2>
         {errore && (
           <p role="alert" className="mt-3 rounded-md border border-navy bg-ice px-3 py-2 text-sm">

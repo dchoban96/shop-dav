@@ -19,7 +19,7 @@ async function Elenco() {
 
   if (ordini.length === 0) {
     return (
-      <div className="mt-8 rounded-lg bg-ice px-6 py-10 text-center">
+      <div className="mt-8 rounded-lg border border-azzurro/40 bg-bianco px-6 py-10 text-center">
         <p className="text-lg">Nessun ordine ancora.</p>
         <p className="mt-2 text-sm text-slate">Il primo lo fai dal carrello in meno di un minuto.</p>
         <div className="mt-6">
@@ -30,7 +30,7 @@ async function Elenco() {
   }
 
   return (
-    <ul className="mt-6 divide-y divide-azzurro/40 rounded-lg border border-azzurro/40">
+    <ul className="mt-6 divide-y divide-azzurro/40 rounded-lg border border-azzurro/40 bg-bianco">
       {ordini.map((o) => (
         <li key={o.id}>
           <Link href={`/ordini/${o.id}`} className="flex items-center justify-between gap-4 px-4 py-4 hover:bg-ice">
