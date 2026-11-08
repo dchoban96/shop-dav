@@ -9,6 +9,7 @@ import { leggiSessione } from "@/lib/sessione";
 import { riordina } from "../../azioni";
 import { Contenitore } from "@/components/Contenitore";
 import { LogoFornitore } from "@/components/LogoFornitore";
+import { riepilogoSconti, testoSconto } from "@/lib/sconti";
 
 export const metadata: Metadata = { title: "Ordine" };
 
@@ -22,6 +23,8 @@ async function Dettaglio({ params, searchParams }: Props) {
   const dettaglio = Number.isInteger(Number(id)) ? await ordinePerId(cliente.id, Number(id)) : null;
   if (!dettaglio) notFound();
   const { ordine, righe } = dettaglio;
+  const { listino, risparmio } = riepilogoSconti(righe);
+  const conSconto = risparmio >= 0.005;
 
   return (
     <>
@@ -32,6 +35,7 @@ async function Dettaglio({ params, searchParams }: Props) {
             L’ufficio DAV lo conferma a breve.{" "}
             {ordine.email_inviata_il ? "Copia inviata via email." : "Email non inviata: invio in configurazione, l’ordine è comunque registrato."}
           </p>
+          {conSconto && <p className="mt-1 text-sm">Con le tue condizioni risparmi {formattaPrezzo(risparmio)} sul listino.</p>}
         </div>
       )}
 
@@ -58,12 +62,16 @@ async function Dettaglio({ params, searchParams }: Props) {
           <tr className="border-b border-azzurro/40">
             <th className="etichetta py-2 font-semibold">Articolo</th>
             <th className="etichetta py-2 text-right font-semibold">Q.tà</th>
-            <th className="etichetta hidden py-2 text-right font-semibold sm:table-cell">Prezzo</th>
+            <th className="etichetta hidden py-2 pl-4 text-right font-semibold sm:table-cell">Listino</th>
+            <th className="etichetta hidden py-2 pl-4 text-right font-semibold sm:table-cell">Sconto</th>
+            <th className="etichetta hidden py-2 pl-4 text-right font-semibold sm:table-cell">Prezzo</th>
             <th className="etichetta py-2 text-right font-semibold">Importo</th>
           </tr>
         </thead>
         <tbody>
-          {righe.map((r) => (
+          {righe.map((r) => {
+            const sconto = testoSconto(r);
+            return (
             <tr key={r.id} className="border-b border-ice align-top">
               <td className="py-2 pr-2">
                 <div className="flex items-start gap-3">
@@ -77,18 +85,43 @@ async function Dettaglio({ params, searchParams }: Props) {
                       {r.um ? ` · ${r.um}` : ""}
                       {r.note ? ` · ${r.note}` : ""}
                     </p>
+                    {/* Su telefono listino, sconto e prezzo stanno sotto la descrizione */}
+                    <p className="text-xs text-slate sm:hidden">
+                      {formattaPrezzo(r.prezzo_finale) ?? "prezzo da definire"}
+                      {r.prezzo_finale !== null && " cad."}
+                      {sconto && ` · listino ${formattaPrezzo(r.prezzo_listino)} · sconto ${sconto}`}
+                    </p>
                   </div>
                 </div>
               </td>
               <td className="py-2 text-right">{r.quantita}</td>
-              <td className="hidden py-2 text-right sm:table-cell">{formattaPrezzo(r.prezzo_finale) ?? "da definire"}</td>
-              <td className="py-2 text-right">{r.prezzo_finale === null ? "—" : formattaPrezzo(r.prezzo_finale * r.quantita)}</td>
+              <td className="hidden py-2 pl-4 text-right text-slate sm:table-cell">{formattaPrezzo(r.prezzo_listino) ?? "—"}</td>
+              <td className="hidden py-2 pl-4 text-right font-semibold sm:table-cell">{sconto ?? "—"}</td>
+              <td className="hidden py-2 pl-4 text-right sm:table-cell">{formattaPrezzo(r.prezzo_finale) ?? "da definire"}</td>
+              <td className="py-2 pl-4 text-right">{r.prezzo_finale === null ? "—" : formattaPrezzo(r.prezzo_finale * r.quantita)}</td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
         <tfoot>
+          {conSconto && (
+            <>
+              <tr>
+                <td colSpan={5} className="pt-3 text-right text-slate">
+                  Totale a listino
+                </td>
+                <td className="pt-3 pl-4 text-right text-slate">{formattaPrezzo(listino)}</td>
+              </tr>
+              <tr>
+                <td colSpan={5} className="pt-1 text-right text-slate">
+                  Sconto sulle tue condizioni
+                </td>
+                <td className="pt-1 pl-4 text-right font-semibold">−{formattaPrezzo(risparmio)}</td>
+              </tr>
+            </>
+          )}
           <tr>
-            <td colSpan={3} className="py-3 text-right text-slate">
+            <td colSpan={5} className="py-3 text-right text-slate">
               Totale netto, IVA esclusa
             </td>
             <td className="prezzo py-3 text-right text-xl">{formattaPrezzo(ordine.totale_netto)}</td>

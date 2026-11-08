@@ -20,6 +20,7 @@ import { cambiaQuantita, conferma, rimuovi, salvaNotaRiga } from "../azioni";
 import { Contenitore } from "@/components/Contenitore";
 import { LogoFornitore } from "@/components/LogoFornitore";
 import { IconaMeno, IconaPiu } from "@/components/Icone";
+import { riepilogoSconti, testoSconto } from "@/lib/sconti";
 
 export const metadata: Metadata = { title: "Carrello" };
 
@@ -35,6 +36,7 @@ function RigaCarrello({ riga }: { riga: RigaOrdine }) {
     famiglia: riga.famiglia ? { id: 0, nome: riga.famiglia } : null, fornitore: null, giacenza: null,
   };
   const prezzo = formattaPrezzo(riga.prezzo_finale);
+  const sconto = testoSconto(riga);
   const subtotale = riga.prezzo_finale === null ? null : formattaPrezzo(riga.prezzo_finale * riga.quantita);
   return (
     <li className="flex gap-3 rounded-lg border border-azzurro/40 bg-bianco p-3 sm:gap-4 sm:p-4">
@@ -50,6 +52,11 @@ function RigaCarrello({ riga }: { riga: RigaOrdine }) {
             {riga.um ? ` · ${riga.um}` : ""}
             {prezzo ? ` · ${prezzo} cad.` : " · prezzo da definire"}
           </p>
+          {sconto && (
+            <p className="text-xs text-slate">
+              Listino {formattaPrezzo(riga.prezzo_listino)} · <span className="font-semibold text-navy">sconto {sconto}</span>
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -139,6 +146,7 @@ async function Contenuto({ searchParams }: Props) {
   const conPrezzo = righe.filter((r) => r.prezzo_finale !== null);
   const totale = conPrezzo.reduce((s, r) => s + (r.prezzo_finale ?? 0) * r.quantita, 0);
   const senzaPrezzo = righe.length - conPrezzo.length;
+  const { listino, risparmio } = riepilogoSconti(righe);
   const giorniCliente = cliente.giorni_consegna;
   const dataDefault = prossimaConsegna(giorniCliente);
 
@@ -179,6 +187,18 @@ async function Contenuto({ searchParams }: Props) {
             <dt className="text-slate">Righe</dt>
             <dd>{righe.length}</dd>
           </div>
+          {risparmio >= 0.005 && (
+            <>
+              <div className="flex justify-between">
+                <dt className="text-slate">Totale a listino</dt>
+                <dd className="text-slate">{formattaPrezzo(listino)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-slate">Sconto sulle tue condizioni</dt>
+                <dd className="font-semibold">−{formattaPrezzo(risparmio)}</dd>
+              </div>
+            </>
+          )}
           <div className="flex justify-between">
             <dt className="text-slate">Totale netto, IVA esclusa</dt>
             <dd className="prezzo text-xl">{formattaPrezzo(totale)}</dd>

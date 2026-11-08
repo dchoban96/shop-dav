@@ -7,6 +7,7 @@ import { ordineAdmin } from "@/lib/dati/admin";
 import { ETICHETTA_STATO, formattaData, type StatoOrdine } from "@/lib/dati/ordini";
 import { aggiornaStato } from "../../azioni";
 import { Contenitore } from "@/components/Contenitore";
+import { riepilogoSconti, testoSconto } from "@/lib/sconti";
 
 export const metadata = { title: "Ordine" };
 
@@ -22,13 +23,12 @@ const PROSSIMI: Record<StatoOrdine, StatoOrdine[]> = {
   annullato: ["inviato"],
 };
 
-const sconto = (s1: number, s2: number) => [s1, s2].filter((s) => s > 0).map((s) => `${s.toLocaleString("it-IT")}%`).join(" + ") || "—";
-
 async function Dettaglio({ params }: Props) {
   const { id } = await params;
   const dati = Number.isInteger(Number(id)) ? await ordineAdmin(Number(id)) : null;
   if (!dati) notFound();
   const { ordine, righe } = dati;
+  const { listino, risparmio } = riepilogoSconti(righe);
 
   return (
     <>
@@ -84,13 +84,32 @@ async function Dettaglio({ params }: Props) {
                 <td className="py-2 text-right font-semibold">{r.quantita}</td>
                 <td className="py-2 pl-2">{r.um ?? "—"}</td>
                 <td className="py-2 text-right">{formattaPrezzo(r.prezzo_listino) ?? "—"}</td>
-                <td className="py-2 text-right">{r.prezzo_accordato !== null ? "accordato" : sconto(r.sconto1, r.sconto2)}</td>
+                <td className="py-2 text-right">
+                  {testoSconto(r) ?? "—"}
+                  {r.prezzo_accordato !== null && <span className="block text-xs text-slate">prezzo accordato</span>}
+                </td>
                 <td className="py-2 text-right">{formattaPrezzo(r.prezzo_finale) ?? "da definire"}</td>
                 <td className="py-2 text-right">{r.prezzo_finale === null ? "—" : formattaPrezzo(r.prezzo_finale * r.quantita)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
+            {risparmio >= 0.005 && (
+              <>
+                <tr>
+                  <td colSpan={7} className="pt-3 text-right text-slate">
+                    Totale a listino
+                  </td>
+                  <td className="pt-3 text-right text-slate">{formattaPrezzo(listino)}</td>
+                </tr>
+                <tr>
+                  <td colSpan={7} className="pt-1 text-right text-slate">
+                    Sconto cliente
+                  </td>
+                  <td className="pt-1 text-right font-semibold">−{formattaPrezzo(risparmio)}</td>
+                </tr>
+              </>
+            )}
             <tr>
               <td colSpan={7} className="py-3 text-right text-slate">
                 Totale netto, IVA esclusa
