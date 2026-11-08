@@ -1,18 +1,18 @@
 import Link from "next/link";
 import { BadgeNts } from "@/components/admin/StatoNts";
 import { elencoOrdini } from "@/lib/dati/admin";
-import { controllaConnettore, MINUTI_SILENZIO } from "@/lib/dati/nts";
+import { leggiConnettore, MINUTI_SILENZIO } from "@/lib/dati/nts";
 import { formattaData } from "@/lib/dati/ordini";
 
 const quando = (iso: string) => formattaData(iso, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
 /**
  * Cruscotto ufficio: stato del connettore NTS (heartbeat) e ordini da controllare.
- * Se il connettore tace da più di MINUTI_SILENZIO minuti l'avviso diventa rosso e
- * parte l'email all'ufficio (al massimo una all'ora).
+ * Se il connettore tace da più di MINUTI_SILENZIO minuti il riquadro diventa rosso.
+ * L'email all'ufficio la manda il job pg_cron in Supabase (migrazione 0008), non questa pagina.
  */
 export async function PannelloNts() {
-  const [conn, daControllare] = await Promise.all([controllaConnettore(), elencoOrdini({ nts: "da_controllare" }).catch(() => null)]);
+  const [conn, daControllare] = await Promise.all([leggiConnettore(), elencoOrdini({ nts: "da_controllare" }).catch(() => null)]);
   const s = conn.stato;
   const allarme = conn.fermo || (s !== null && !s.sql_ok);
 
@@ -39,7 +39,12 @@ export async function PannelloNts() {
         )}
         {conn.fermo && (
           <p className="mt-1">
-            Oltre {MINUTI_SILENZIO} minuti di silenzio: controllare la macchina del connettore. L’ufficio riceve un’email di avviso.
+            Oltre {MINUTI_SILENZIO} minuti di silenzio: controllare la macchina del connettore.
+          </p>
+        )}
+        {conn.avviso && (
+          <p className={`mt-1 text-xs ${allarme ? "" : "text-slate"}`}>
+            Ultimo avviso via email: {quando(conn.avviso.inviato_il)} · {conn.avviso.esito}
           </p>
         )}
       </div>

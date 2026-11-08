@@ -127,7 +127,7 @@ class NtsFinto implements PortaNts {
     this.scritture.push({ prep, prova });
     const id = this.prossimoId++;
     if (!prova) this.testate.set(id, { id, stato: "N", numero: null, logErrori: "", rif: prep.riferimento, conto: prep.conto });
-    return { id, righe: prep.righe.length };
+    return { id, righe: prep.righe.length, dataIns: new Date() };
   }
   /** Il servizio NTS elabora la testata: numero assegnato e ordine in testord. */
   elabora(id: number, numero: number) {
@@ -303,4 +303,20 @@ test("esito: LOG_ERRORI → errore; C senza ordine in testord → da verificare"
   assert.equal(shop.ordini.get(1)!.stato, "errore");
   assert.equal(shop.ordini.get(2)!.stato, "da_verificare");
   assert.equal(email.length, 2);
+});
+
+test("SQL Server: date in ora locale (useUTC false) per connettore e strumenti", async () => {
+  const { configurazioneSql } = await import("./nts.js");
+  const c = configurazioneSql(cfgBase, "prova", { requestTimeout: 60000 });
+  assert.equal(c.options?.useUTC, false);
+  assert.equal(c.requestTimeout, 60000);
+  assert.equal(c.database, "NTS_FRONTIERA");
+});
+
+test("registro dell'ordine: DATA_INS scritta in ora locale", async () => {
+  const { shop, c } = ambiente();
+  shop.aggiungi(ordineProva());
+  await c.giro();
+  const voce = shop.registro.find((l) => l.evento === "in_frontiera");
+  assert.match(voce?.dettaglio ?? "", /DATA_DOC \d{2}\/\d{2}\/\d{4}, DATA_INS \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2} \(ora locale\)/);
 });

@@ -7,6 +7,7 @@
  */
 import sql from "mssql";
 import { DITTA, leggiConfig } from "./config.js";
+import { configurazioneSql } from "./nts.js";
 import { messaggio } from "./registro.js";
 
 async function main() {
@@ -16,15 +17,7 @@ async function main() {
     process.exit(1);
   }
   const cfg = leggiConfig();
-  const pool = await new sql.ConnectionPool({
-    server: cfg.mssql.server,
-    port: cfg.mssql.porta,
-    database: "NTS_FRONTIERA",
-    user: cfg.mssql.utente,
-    password: cfg.mssql.password,
-    requestTimeout: 60000,
-    options: { instanceName: cfg.mssql.istanza, encrypt: true, trustServerCertificate: cfg.mssql.trustServerCertificate, appName: "ShopDAV-CercaRiferimento" },
-  }).connect();
+  const pool = await new sql.ConnectionPool(configurazioneSql(cfg, "ShopDAV-CercaRiferimento", { requestTimeout: 60000 })).connect();
   try {
     const colonne = await pool.request().input("len", sql.Int, rif.length).query<{ name: string }>(
       `SELECT c.name FROM DAVNTS.sys.columns c JOIN DAVNTS.sys.types t ON t.user_type_id = c.user_type_id

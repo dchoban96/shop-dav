@@ -1,12 +1,11 @@
 /**
  * Ordini verso NTS, lato shop (BRIEF_INTEGRAZIONE_NTS, sezione 6).
  * Il lavoro vero lo fa il connettore in LAN (cartella `connettore-nts/`); qui ci sono
- * le letture per l'ufficio, le due azioni manuali e l'allarme se il connettore tace.
- * Service role, solo lato server e solo dopo il controllo di sessione admin
- * (tranne `controllaConnettore`, che legge e scrive soltanto le impostazioni).
+ * le letture per l'ufficio e le due azioni manuali. L'email "connettore fermo" la manda
+ * un job pg_cron in Supabase (migrazione 0008), non lo shop.
+ * Service role, solo lato server e solo dopo il controllo di sessione admin.
  */
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { escapeHtml, inviaEmail } from "@/lib/email/invio";
 import type { StatoNts } from "@/lib/dati/ordini";
 
 export const ETICHETTA_NTS: Record<StatoNts, string> = {
@@ -34,17 +33,24 @@ export type StatoConnettore = {
   clienti_abilitati: string | null;
 };
 
-export type Connettore = { stato: StatoConnettore | null; fermo: boolean; minuti: number | null };
+/** Ultimo avviso "connettore fermo" del job in Supabase (impostazioni.connettore_nts_allarme). */
+export type AvvisoConnettore = { inviato_il: string; esito: string };
+
+export type Connettore = { stato: StatoConnettore | null; fermo: boolean; minuti: number | null; avviso: AvvisoConnettore | null };
 
 export async function leggiConnettore(): Promise<Connettore> {
-  const { data, error } = await supabaseAdmin().from("impostazioni").select("valore").eq("chiave", "connettore_nts").maybeSingle();
-  if (error || !data) return { stato: null, fermo: false, minuti: null };
-  const v = data.valore as Partial<StatoConnettore>;
-  if (!v?.ultimo_giro) return { stato: null, fermo: false, minuti: null };
-  const minuti = Math.floor((Date.now() - new Date(v.ultimo_giro).getTime()) / 60000);
+  const { data, error } = await supabaseAdmin().from("impostazioni").select("chiave, valore").in("chiave", ["connettore_nts", "connettore_nts_allarme"]);
+  const valori = new Map((error ? [] : (data ?? [])).map((r) => [r.chiave as string, r.valore as Record<string, unknown>]));
+  const a = valori.get("connettore_nts_allarme");
+  const avviso = a?.inviato_il ? { inviato_il: String(a.inviato_il), esito: String(a.esito ?? "") } : null;
+  const v = valori.get("connettore_nts") as (Partial<StatoConnettore> & { ricevuto_il?: string }) | undefined;
+  if (!v?.ultimo_giro) return { stato: null, fermo: false, minuti: null, avviso };
+  // ricevuto_il lo mette il database (migrazione 0008): non dipende dall'orologio della macchina in LAN.
+  const ultimo = v.ricevuto_il ?? v.ultimo_giro;
+  const minuti = Math.floor((Date.now() - new Date(ultimo).getTime()) / 60000);
   return {
     stato: {
-      ultimo_giro: v.ultimo_giro,
+      ultimo_giro: ultimo,
       modalita: String(v.modalita ?? "?"),
       sql_ok: v.sql_ok !== false,
       ultimo_errore: v.ultimo_errore ?? null,
@@ -53,6 +59,7 @@ export async function leggiConnettore(): Promise<Connettore> {
     },
     fermo: minuti >= MINUTI_SILENZIO,
     minuti,
+    avviso,
   };
 }
 
@@ -94,40 +101,4 @@ export async function reinviaOrdineNts(ordineId: number): Promise<boolean> {
 /** L'ufficio l'ha inserito (o controllato) a mano in NTS: il connettore non lo tocca più. */
 export async function segnaInseritoAMano(ordineId: number, nota: string): Promise<boolean> {
   return passaStato(ordineId, ["errore", "da_verificare", "da_inviare"], "manuale", "manuale", nota);
-}
-
-/**
- * Se il connettore non si fa sentire da più di MINUTI_SILENZIO minuti, manda un'email
- * all'ufficio (al massimo una all'ora). Non fa nulla se il connettore non è mai partito.
- * Lo shop non ha processi in background: si chiama alla conferma di un ordine,
- * all'apertura del cruscotto e ogni 10 minuti da `/api/cron/connettore`
- * (workflow GitHub `controllo-connettore.yml`), così l'allarme parte anche di notte.
- */
-export async function controllaConnettore(): Promise<Connettore> {
-  const c = await leggiConnettore();
-  if (!c.stato || !c.fermo) return c;
-  try {
-    const db = supabaseAdmin();
-    const { data } = await db.from("impostazioni").select("valore").eq("chiave", "connettore_nts_allarme").maybeSingle();
-    const ultimo = typeof data?.valore === "string" ? new Date(data.valore).getTime() : 0;
-    if (Date.now() - ultimo < 60 * 60 * 1000) return c;
-    await db.from("impostazioni").upsert({ chiave: "connettore_nts_allarme", valore: new Date().toISOString() });
-    const { data: em } = await db.from("impostazioni").select("valore").eq("chiave", "email_ordini").maybeSingle();
-    const a = typeof em?.valore === "string" ? em.valore : process.env.EMAIL_ORDINI || "info@davsnc.it";
-    const quando = new Intl.DateTimeFormat("it-IT", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Rome" }).format(new Date(c.stato.ultimo_giro));
-    const testo =
-      `Il connettore NTS non si fa sentire da ${c.minuti} minuti (ultimo giro: ${quando}).\n` +
-      "Gli ordini dello shop non stanno entrando in NTS in automatico.\n\n" +
-      "Controllare che la macchina del connettore sia accesa e in rete e che il servizio ShopDavConnettoreNts sia avviato.\n" +
-      "Nel frattempo gli ordini restano in coda e partono appena il connettore riparte; l'email di ogni ordine arriva comunque.";
-    await inviaEmail({
-      a: [a],
-      oggetto: "[Shop DAV] Connettore NTS fermo",
-      html: `<pre style="font-family:Arial,sans-serif;font-size:14px;white-space:pre-wrap">${escapeHtml(testo)}</pre>`,
-      testo,
-    });
-  } catch (e) {
-    console.error("controllaConnettore:", e);
-  }
-  return c;
 }

@@ -12,6 +12,9 @@ Migrazioni SQL in `migrations/`, in ordine:
    tabella `log_nts`, riferimento `SHOP-000123` assegnato alla conferma, `claim_ordini_nts` e
    `passa_stato_nts` (solo service role, usate dal connettore in `connettore-nts/`).
    Va applicata **prima** di pubblicare lo shop che la usa.
+8. `0008_avviso_connettore_nts.sql` — job pg_cron ogni minuto (`controlla_connettore_nts`): se il connettore
+   NTS tace da 5 minuti manda l'email all'ufficio via pg_net → Resend, con la chiave `resend_api_key` del Vault.
+   Il trigger su `impostazioni` mette `ricevuto_il` (ora del database) nell'heartbeat.
 
 ## Applicarle
 

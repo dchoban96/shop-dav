@@ -19,9 +19,13 @@ Connettore (ogni 30 s)      ──► controlli ──► frontiera NTS ──�
 - Windows 10/11 o Windows Server 2016 e successivi.
 - **Node.js 22 LTS** o più recente: <https://nodejs.org> → "LTS" → installare con le opzioni predefinite.
 - **NSSM** per farlo girare come servizio: <https://nssm.cc/download> → scompattare in `C:\nssm`.
-- Nel database dello shop la **migrazione `supabase/migrations/0007_ordini_nts.sql`** già applicata
-  (Supabase → SQL Editor → incollare il file → Run, poi registrarla in `_migrazioni`).
-  Va applicata **prima** di pubblicare la versione dello shop che la usa.
+- Nel database dello shop le **migrazioni `0007_ordini_nts.sql` e `0008_avviso_connettore_nts.sql`** applicate
+  (Supabase → SQL Editor → incollare il file → Run).
+- Per l'email "connettore fermo" la chiave Resend nel **Vault di Supabase**, una volta sola, dal SQL Editor
+  (scrivere la chiave solo lì, non salvare la query):
+  ```sql
+  select vault.create_secret('<chiave Resend re_...>', 'resend_api_key', 'Resend: avvisi connettore NTS');
+  ```
 
 ## Installazione (una volta)
 
@@ -33,6 +37,8 @@ Connettore (ogni 30 s)      ──► controlli ──► frontiera NTS ──�
    npm ci
    npm run build
    ```
+   `npm ci` installa le versioni esatte di `package-lock.json`. Se sulla macchina è impostato
+   `NODE_ENV=production`, usare `npm ci --include=dev` (TypeScript serve per la build).
 3. Creare il file di configurazione: copiare `.env.example` in `.env` e aprirlo con il Blocco note.
    ```powershell
    copy .env.example .env
@@ -55,35 +61,24 @@ Connettore (ogni 30 s)      ──► controlli ──► frontiera NTS ──�
    ```powershell
    npm run una-volta
    ```
-6. Installare il servizio (parte con Windows e riparte da solo se cade):
+6. Installare il servizio (parte con Windows e riparte da solo se cade). Si può installare anche
+   in `MODALITA=prova`: ogni ordine viene provato **una volta sola** (registro "prova_ok"), poi resta
+   "Da inviare" ma il servizio non lo riprova a ogni giro; parte davvero solo passando a `MODALITA=reale`.
+   Lo riprova soltanto se nel frattempo fallisce per un errore tecnico (rete, timeout) o viene recuperato dopo un crash.
    ```powershell
    powershell -ExecutionPolicy Bypass -File .\installa-servizio.ps1 -Nssm C:\nssm\win64\nssm.exe
    ```
 
-## Allarme connettore fermo (una volta, sul sito)
-
-Lo shop non ha processi in background: per accorgersi che il connettore è fermo anche quando nessuno usa il
-portale, il workflow `.github/workflows/controllo-connettore.yml` chiama ogni 10 minuti `/api/cron/connettore`.
-
-1. Inventare una chiave lunga e casuale (almeno 32 caratteri) e salvarla nel gestore password.
-2. GitHub → repository `shop-dav` → *Settings* → *Secrets and variables* → *Actions* → *New repository secret*:
-   nome `CRON_SECRET`, valore la chiave. Controllare che esista anche `APP_URL` (indirizzo del sito).
-3. *Actions* → "Build e deploy su Cloudflare" → *Run workflow* su `main`: copia `CRON_SECRET` nel Worker.
-4. *Actions* → "Controllo connettore NTS" → *Run workflow*: nel log deve comparire una riga come
-   `{"connettore":"attivo","minuti_dall_ultimo_giro":0}` (oppure `"mai_partito"` se il connettore non è ancora installato).
-
-Senza `CRON_SECRET` il controllo viene saltato e l'allarme parte solo alla conferma di un ordine o all'apertura
-del cruscotto. GitHub può ritardare gli avvii programmati di qualche minuto.
-
 ## Uso quotidiano
 
-- **Registro**: `logs\connettore.log` nella cartella del connettore. Una riga per evento.
-  Ogni giorno (o a 10 MB) il file viene archiviato come `connettore-AAAAMMGGThhmmss.log`;
-  il connettore cancella da solo gli archivi più vecchi di 30 giorni.
-- **Nel portale**: cruscotto ufficio → riquadro "Connettore NTS" (ultimo giro, modalità) e "Da controllare in NTS".
-  Se il connettore non si fa sentire per più di 5 minuti il riquadro diventa rosso e parte un'email all'ufficio
-  (al massimo una all'ora). Il controllo gira **ogni 10 minuti anche di notte e nel weekend** grazie al workflow
-  GitHub "Controllo connettore NTS" (vedi *Allarme connettore fermo* sotto).
+- **Registro**: `logs\connettore.log` nella cartella del connettore, una riga per evento. Ogni giorno il file del
+  giorno prima diventa `logs\connettore-AAAA-MM-GG.log`; si tengono 30 giorni, i più vecchi si cancellano da soli.
+  `logs\servizio.log` raccoglie solo quello che il programma scrive fuori dal registro (es. un crash all'avvio).
+- **Nel portale**: cruscotto ufficio → riquadro "Connettore NTS" (ultimo segnale, modalità, ultimo avviso) e "Da controllare in NTS".
+  Se il connettore non si fa sentire per più di 5 minuti il riquadro diventa rosso.
+- **Email "connettore fermo"**: la manda un job programmato in Supabase (pg_cron, ogni minuto, migrazione 0008),
+  quindi arriva anche se la macchina del connettore è spenta e nessuno apre il portale. Al massimo una all'ora
+  per lo stesso silenzio. Per vedere lo stato a mano, nel SQL Editor: `select public.controlla_connettore_nts();`
 - **Ordine in errore o da verificare**: arriva un'email con il motivo. Nel dettaglio ordine del portale:
   - *Reinvia* (solo errori dei controlli, dopo aver corretto la causa);
   - *Segna inserito a mano* (dopo averlo inserito o trovato in NTS, con una nota);
@@ -119,11 +114,11 @@ Fermarsi dopo ogni punto e controllare il risultato prima di passare al successi
 | # | Impostazioni / azione | Risultato atteso |
 |---|---|---|
 | 1 | `MODALITA=prova`, `CLIENTI_ABILITATI=<codice del cliente di prova>`. Ordine dallo shop come quel cliente: 2 righe, una nota di riga, nota d'ordine "PROVA SHOP - NON EVADERE". `npm run una-volta` | Nel registro dell'ordine "prova_ok". Niente in NTS. L'ordine resta "Da inviare". |
-| 2 | `MODALITA=reale`, stesso ordine. `npm run una-volta` due volte a qualche secondo di distanza | "In NTS" con numero. In Business: prezzo, sconti, note e riferimento giusti. Poi cancellare l'ordine in Business. |
+| 2 | `MODALITA=reale`, stesso ordine. `npm run una-volta` due volte a qualche secondo di distanza, poi `npm run controlla` | "In NTS" con numero. In Business: prezzo, sconti, note e riferimento giusti. **Date**: in `controlla` → "Ultime testate dello shop" la `DATA_DOC` è il giorno dell'ordine e la `DATA_INS` è l'ora dell'invio come sull'orologio di Windows (stessa ora di "questa macchina" e di `GETDATE()`, non un'ora o due indietro), nello stesso formato delle testate dei palmari; il registro dell'ordine nel portale riporta la `DATA_INS` inviata. Poi cancellare l'ordine in Business. |
 | 3 | Rimettere a mano lo stesso ordine "da_inviare" (SQL Editor: `update ordini set stato_nts = 'da_inviare' where riferimento_nts = 'SHOP-…'`). `npm run una-volta` | Registro "gia_in_frontiera": nessun secondo ordine in NTS. |
 | 4 | Ordine con un articolo o un cliente che non esiste in NTS | "Errore" con email all'ufficio, niente scritto in frontiera. |
 | 5 | `SIMULA_CRASH_DOPO_COMMIT=si`, nuovo ordine, `npm run una-volta` (esce dopo il COMMIT). Poi `SIMULA_CRASH_DOPO_COMMIT=no`, attendere 2 minuti, `npm run una-volta` | Il recupero trova il riferimento in frontiera: "In frontiera" / "In NTS", nessun secondo invio. |
-| 6 | `MSSQL_SERVER` sbagliato (o rete staccata), servizio acceso per più di 5 minuti | L'ordine resta "Da inviare", heartbeat con SQL non raggiungibile, email di allarme dopo 5 minuti. Rimessa la configurazione giusta, l'ordine parte. |
+| 6 | `MSSQL_SERVER` sbagliato (o rete staccata), servizio acceso per più di 5 minuti | L'ordine resta "Da inviare", heartbeat con SQL non raggiungibile, email di allarme dopo 5 minuti. Rimessa la configurazione giusta, l'ordine parte. Poi fermare il servizio per più di 5 minuti: arriva l'email "Connettore NTS fermo" mandata da Supabase e il cruscotto diventa rosso. |
 | 7 | Solo dopo l'ok: `CLIENTI_ABILITATI=` vuota, riavviare il servizio | Passano gli ordini di tutti i clienti. |
 
 Prima di togliere `CLIENTI_ABILITATI`: creare il login `shop_dav` con `sql\crea_utente_shop_dav.sql`,

@@ -30,6 +30,41 @@ const OBBLIGATORIE_TESTATA = [
 const OBBLIGATORIE_RIGA = ["ID_TESTATA", "NTS_RIGA", "CODICE_ART", "COLLI", "QUANTITA", "NOTE", "PREZZO", "SCONTO1", "SCONTO2", "UM", "DESCRIZIONE", "ID_KIT_ESTESO"];
 const OBBLIGATORIE_SEMAFORO = ["AZIONE", "ID_ELABORAZIONE", "STATO", "TIPO_OGGETTO", "QUERY_OK_NTS", "QUERY_FAIL_NTS"];
 
+/**
+ * Configurazione mssql unica per connettore, `controlla` e `cerca-riferimento`.
+ * useUTC: false → le date (DATA_DOC, DATA_INS, DATA_CONS) si scrivono e si leggono
+ * nell'ora locale di questa macchina (Italia), come le scrivono NTS e i palmari.
+ * Con il valore predefinito di mssql (true) DATA_INS finirebbe un'ora o due indietro.
+ */
+export function configurazioneSql(cfg: Config, appName: string, extra: Partial<sql.config> = {}): sql.config {
+  const m = cfg.mssql;
+  return {
+    server: m.server,
+    port: m.porta,
+    database: "NTS_FRONTIERA",
+    user: m.utente,
+    password: m.password,
+    connectionTimeout: 15000,
+    requestTimeout: 30000,
+    pool: { max: 2, min: 0, idleTimeoutMillis: 60000 },
+    ...extra,
+    options: {
+      instanceName: m.istanza,
+      encrypt: true,
+      trustServerCertificate: m.trustServerCertificate,
+      useUTC: false,
+      appName,
+    },
+  };
+}
+
+/** Data e ora locali leggibili (gg/mm/aaaa hh:mm:ss), senza dipendere dalle impostazioni internazionali. */
+export function dataOraLocale(d: Date | null | undefined): string {
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "-";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
 /** Tipo mssql dalla colonna reale, così precisione, scala e lunghezze sono quelle di SQL Server. */
 function tipoSql(c: Colonna | undefined): sql.ISqlType | (() => sql.ISqlType) | undefined {
   if (!c) return undefined;
@@ -84,25 +119,7 @@ export class Nts {
   constructor(private cfg: Config) {}
 
   private configurazione(): sql.config {
-    const m = this.cfg.mssql;
-    return {
-      server: m.server,
-      port: m.porta,
-      database: "NTS_FRONTIERA",
-      user: m.utente,
-      password: m.password,
-      connectionTimeout: 15000,
-      requestTimeout: 30000,
-      pool: { max: 2, min: 0, idleTimeoutMillis: 60000 },
-      options: {
-        instanceName: m.istanza,
-        encrypt: true,
-        trustServerCertificate: m.trustServerCertificate,
-        // Le date vanno scritte nell'ora locale di questa macchina (Italia), come fa NTS.
-        useUTC: false,
-        appName: "ShopDAV-Connettore",
-      },
-    };
+    return configurazioneSql(this.cfg, "ShopDAV-Connettore");
   }
 
   /** Connette (o verifica la connessione) e legge le colonne reali delle tabelle di frontiera. */
@@ -240,12 +257,13 @@ export class Nts {
    * Ricetta del brief in un'unica transazione: testata, righe (con le note 'D'), semaforo.
    * In prova: tutto tranne il semaforo, poi ROLLBACK. Restituisce l'ID della testata.
    */
-  async scrivi(o: OrdinePreparato, prova: boolean): Promise<{ id: number; righe: number }> {
+  async scrivi(o: OrdinePreparato, prova: boolean): Promise<{ id: number; righe: number; dataIns: Date }> {
     if (!this.pool) throw new Error("SQL Server non connesso");
     const T = (n: string) => tipoSql(this.colTestata.get(n));
     const R = (n: string) => tipoSql(this.colRiga.get(n));
     const tx = new sql.Transaction(this.pool);
     let commitInviato = false;
+    const dataIns = new Date();
     await tx.begin();
     try {
       await this.req(tx).batch("SET XACT_ABORT ON");
@@ -257,7 +275,7 @@ export class Nts {
         .input("anno", T("ANNO") ?? sql.Int, o.anno)
         .input("datadoc", T("DATA_DOC") ?? sql.DateTime, o.dataDoc)
         .input("conto", T("CONTO") ?? sql.Int, o.conto)
-        .input("datains", T("DATA_INS") ?? sql.DateTime, new Date())
+        .input("datains", T("DATA_INS") ?? sql.DateTime, dataIns)
         .input("note", T("NOTE") ?? sql.NVarChar(sql.MAX), o.note)
         .input("rif", T("RIFERIMENTO") ?? sql.NVarChar(50), o.riferimento);
       if (o.dataCons) rt.input("datacons", T("DATA_CONS") ?? sql.DateTime, o.dataCons);
@@ -305,7 +323,7 @@ export class Nts {
       if (prova) {
         // Prova a secco: tutto annullato, il semaforo non viene nemmeno scritto.
         await tx.rollback();
-        return { id, righe: o.righe.length };
+        return { id, righe: o.righe.length, dataIns };
       }
 
       // Semaforo: il "campanello" che il servizio NTS controlla ogni secondo.
@@ -317,7 +335,7 @@ export class Nts {
         );
       commitInviato = true;
       await tx.commit();
-      return { id, righe: o.righe.length };
+      return { id, righe: o.righe.length, dataIns };
     } catch (e) {
       if (!commitInviato) await tx.rollback().catch(() => undefined);
       throw new ErroreScrittura(e, commitInviato);

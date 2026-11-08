@@ -4,7 +4,6 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { inviaEmailOrdine } from "@/lib/email/ordine";
 import { leggiImpostazioni } from "@/lib/dati/admin";
-import { controllaConnettore } from "@/lib/dati/nts";
 import {
   aggiornaRiga,
   aggiungiAlCarrello,
@@ -113,8 +112,6 @@ export async function conferma(formData: FormData): Promise<void> {
     const esito = await inviaEmailOrdine({ cliente: c, ordine: dettaglio.ordine, righe: dettaglio.righe, emailUfficio: email_ordini });
     if (esito.inviata) await segnaEmailInviata(ordine.id);
   }
-  // Se il connettore NTS è fermo, l'ufficio lo deve sapere adesso (email al massimo una all'ora).
-  if (!c.demo) await controllaConnettore().catch(() => undefined);
   refresh();
   redirect(`/ordini/${ordine.id}?confermato=1`);
 }

@@ -54,10 +54,9 @@ jobs:
           EMAIL_MITTENTE: ${{ secrets.EMAIL_MITTENTE }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           node -e '
-            const nomi = ["NEXT_PUBLIC_SUPABASE_URL","NEXT_PUBLIC_SUPABASE_ANON_KEY","SUPABASE_SERVICE_ROLE_KEY","AUTH_SECRET","DEMO_CODICI_CLIENTE","APP_URL","EMAIL_ORDINI","EMAIL_MITTENTE","RESEND_API_KEY","ADMIN_PASSWORD","CRON_SECRET"];
+            const nomi = ["NEXT_PUBLIC_SUPABASE_URL","NEXT_PUBLIC_SUPABASE_ANON_KEY","SUPABASE_SERVICE_ROLE_KEY","AUTH_SECRET","DEMO_CODICI_CLIENTE","APP_URL","EMAIL_ORDINI","EMAIL_MITTENTE","RESEND_API_KEY","ADMIN_PASSWORD"];
             const o = {};
             for (const n of nomi) if (process.env[n]) o[n] = process.env[n];
             require("fs").writeFileSync(process.env.RUNNER_TEMP + "/segreti.json", JSON.stringify(o));

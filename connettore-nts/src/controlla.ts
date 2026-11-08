@@ -9,7 +9,7 @@
  */
 import sql from "mssql";
 import { descriviConfig, DITTA, leggiConfig } from "./config.js";
-import { Nts } from "./nts.js";
+import { configurazioneSql, dataOraLocale, Nts } from "./nts.js";
 import { messaggio } from "./registro.js";
 import { Shop } from "./shop.js";
 
@@ -27,14 +27,7 @@ async function main() {
   try {
     await nts.connetti();
     ok("connessione e colonne di frontiera");
-    const pool = await new sql.ConnectionPool({
-      server: cfg.mssql.server,
-      port: cfg.mssql.porta,
-      database: "NTS_FRONTIERA",
-      user: cfg.mssql.utente,
-      password: cfg.mssql.password,
-      options: { instanceName: cfg.mssql.istanza, encrypt: true, trustServerCertificate: cfg.mssql.trustServerCertificate, appName: "ShopDAV-Controllo" },
-    }).connect();
+    const pool = await new sql.ConnectionPool(configurazioneSql(cfg, "ShopDAV-Controllo")).connect();
     try {
       const v = await pool.request().query<{ v: string; u: string }>("SELECT CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(50)) AS v, SUSER_SNAME() AS u");
       info(`versione ${v.recordset[0].v}, connesso come ${v.recordset[0].u}`);
@@ -73,14 +66,27 @@ async function main() {
         ok("lettura DAVNTS.dbo.movord negata (permessi minimi corretti)");
       }
 
+      // Date: scritte e lette nell'ora locale (useUTC: false). Punto 2 del piano di prova:
+      // DATA_INS della testata dello shop = ora dell'invio, come sull'orologio di Windows e come GETDATE() del server.
+      const ore = await pool.request().query<{ server: Date }>("SELECT GETDATE() AS server");
+      console.log("\n  Orologi:");
+      info(`questa macchina  ${dataOraLocale(new Date())}`);
+      info(`SQL Server       ${dataOraLocale(ore.recordset[0].server)}  (GETDATE)`);
+      type Testata = { ID: number; RIFERIMENTO: string | null; STATO_LAVORAZIONE: string; NUMERO: number | null; DATA_DOC: Date | null; DATA_INS: Date | null };
+      const riga = (t: Testata) =>
+        info(`ID ${t.ID}  ${t.RIFERIMENTO ?? "-"}  stato ${t.STATO_LAVORAZIONE}  numero ${t.NUMERO ?? "-"}  DATA_DOC ${dataOraLocale(t.DATA_DOC)}  DATA_INS ${dataOraLocale(t.DATA_INS)}`);
       const ultimi = await pool
         .request()
-        .query<{ ID: number; RIFERIMENTO: string | null; STATO_LAVORAZIONE: string; NUMERO: number | null; DATA_INS: Date }>(
-          "SELECT TOP 5 ID, RIFERIMENTO, STATO_LAVORAZIONE, NUMERO, DATA_INS FROM dbo.GPH_TESTATA_NTS WHERE RIFERIMENTO LIKE 'SHOP-%' ORDER BY ID DESC",
-        );
+        .query<Testata>("SELECT TOP 5 ID, RIFERIMENTO, STATO_LAVORAZIONE, NUMERO, DATA_DOC, DATA_INS FROM dbo.GPH_TESTATA_NTS WHERE RIFERIMENTO LIKE 'SHOP-%' ORDER BY ID DESC");
       console.log("\n  Ultime testate dello shop in frontiera:");
       if (!ultimi.recordset.length) info("nessuna");
-      for (const t of ultimi.recordset) info(`ID ${t.ID}  ${t.RIFERIMENTO}  stato ${t.STATO_LAVORAZIONE}  numero ${t.NUMERO ?? "-"}  ${t.DATA_INS?.toLocaleString?.("it-IT") ?? ""}`);
+      ultimi.recordset.forEach(riga);
+      const palmari = await pool
+        .request()
+        .query<Testata>("SELECT TOP 2 ID, RIFERIMENTO, STATO_LAVORAZIONE, NUMERO, DATA_DOC, DATA_INS FROM dbo.GPH_TESTATA_NTS WHERE RIFERIMENTO IS NULL OR RIFERIMENTO NOT LIKE 'SHOP-%' ORDER BY ID DESC");
+      console.log("\n  Ultime testate dei palmari (per confronto, stesso formato atteso):");
+      if (!palmari.recordset.length) info("nessuna");
+      palmari.recordset.forEach(riga);
     } finally {
       await pool.close();
     }

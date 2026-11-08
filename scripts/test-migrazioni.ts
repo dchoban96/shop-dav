@@ -22,6 +22,17 @@ async function main() {
     create table auth.users (id uuid primary key);
     create function auth.uid() returns uuid language sql stable as $$
       select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+    -- Stub di pg_net, pg_cron e Vault (estensioni Supabase assenti in PGlite)
+    create schema net;
+    create table net.chiamate (id bigserial primary key, url text, body jsonb, headers jsonb);
+    create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds integer default 5000)
+      returns bigint language sql as $$ insert into net.chiamate (url, body, headers) values (url, body, headers) returning id $$;
+    create schema cron;
+    create table cron.job (jobname text primary key, schedule text, command text);
+    create function cron.schedule(nome text, quando text, comando text) returns bigint language sql as $$
+      insert into cron.job values (nome, quando, comando) on conflict (jobname) do update set schedule = excluded.schedule, command = excluded.command returning 1::bigint $$;
+    create schema vault;
+    create table vault.decrypted_secrets (name text primary key, decrypted_secret text);
     do $$ begin
       if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated; end if;
       if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon; end if;
@@ -31,7 +42,8 @@ async function main() {
 
   for (const f of readdirSync(DIR).filter((x) => x.endsWith(".sql")).sort()) {
     process.stdout.write(`migrazione ${f} … `);
-    await db.exec(readFileSync(join(DIR, f), "utf8"));
+    // Le estensioni Supabase sono sostituite dagli stub qui sopra.
+    await db.exec(readFileSync(join(DIR, f), "utf8").replace(/^create extension if not exists pg_(net|cron);$/gm, ""));
     console.log("ok");
   }
 
@@ -205,6 +217,39 @@ async function main() {
   const adm = await db.query<{ n: string }>(`select count(*) n from clienti`);
   assert(Number(adm.rows[0].n) === 3, `RLS admin vede ${adm.rows[0].n} clienti invece di 3`); // C001, C002, DEMO1
   await db.exec(`reset role;`);
+
+  // Avviso "connettore muto" (0008): job ogni minuto, email via pg_net solo dopo 5 minuti di silenzio
+  const job = (await db.query<{ schedule: string; command: string }>(`select schedule, command from cron.job where jobname = 'connettore-nts-muto'`)).rows[0];
+  assert(job?.schedule === "* * * * *" && job.command.includes("controlla_connettore_nts"), `job pg_cron: ${JSON.stringify(job)}`);
+  const controlla = async () => (await db.query<{ e: string }>(`select public.controlla_connettore_nts() e`)).rows[0].e;
+  const chiamate = async () => Number((await db.query<{ n: string }>(`select count(*) n from net.chiamate`)).rows[0].n);
+  assert((await controlla()) === "connettore mai avviato: nessun avviso", "senza heartbeat nessun avviso");
+  await db.exec(`insert into impostazioni (chiave, valore) values ('connettore_nts', '{"ultimo_giro": "2000-01-01T00:00:00Z", "modalita": "prova"}')`);
+  const hb = (await db.query<{ r: string | null }>(`select valore->>'ricevuto_il' r from impostazioni where chiave = 'connettore_nts'`)).rows[0];
+  assert(hb.r !== null, "heartbeat: ricevuto_il messo dal database");
+  assert((await controlla()) === "connettore attivo", "heartbeat appena ricevuto (vale l'ora del database, non ultimo_giro)");
+  const zittisci = (min: number) =>
+    db.exec(`alter table impostazioni disable trigger impostazioni_heartbeat;
+             update impostazioni set valore = jsonb_set(valore, '{ricevuto_il}', to_jsonb(now() - interval '${min} minutes')) where chiave = 'connettore_nts';
+             alter table impostazioni enable trigger impostazioni_heartbeat;`);
+  await zittisci(4);
+  assert((await controlla()) === "connettore attivo", "4 minuti: ancora attivo");
+  await zittisci(6);
+  assert((await controlla()) === "chiave Resend mancante" && (await chiamate()) === 0, "senza chiave Resend nessuna chiamata");
+  await db.exec(`delete from impostazioni where chiave = 'connettore_nts_allarme'; insert into vault.decrypted_secrets values ('resend_api_key', 're_prova')`);
+  assert((await controlla()) === "avviso inviato" && (await chiamate()) === 1, "6 minuti: avviso");
+  const c1 = (await db.query<{ url: string; body: { to: string[]; subject: string; from: string }; headers: { Authorization: string } }>(`select url, body, headers from net.chiamate`)).rows[0];
+  assert(c1.url === "https://api.resend.com/emails" && c1.headers.Authorization === "Bearer re_prova" && c1.body.to[0] === "info@davsnc.it" && c1.body.from === "DAV Ordini <ordini@davsnc.it>", `email: ${JSON.stringify(c1)}`);
+  assert((await controlla()) === "silenzio già segnalato" && (await chiamate()) === 1, "stesso silenzio: niente seconda email");
+  // avviso partito 10 minuti fa, poi il connettore riparte e dopo un po' tace di nuovo
+  await db.exec(`update impostazioni set valore = jsonb_set(valore, '{inviato_il}', to_jsonb(now() - interval '10 minutes')) where chiave = 'connettore_nts_allarme'`);
+  await db.exec(`update impostazioni set valore = valore where chiave = 'connettore_nts'`);
+  assert((await controlla()) === "connettore attivo", "connettore ripartito");
+  await zittisci(7);
+  assert((await controlla()) === "avviso inviato" && (await chiamate()) === 2, "nuovo silenzio dopo la ripartenza: nuova email");
+  await db.exec(`update impostazioni set valore = jsonb_set(valore, '{inviato_il}', to_jsonb(now() - interval '61 minutes')) where chiave = 'connettore_nts_allarme'`);
+  await zittisci(90);
+  assert((await controlla()) === "avviso inviato" && (await chiamate()) === 3, "silenzio lungo: promemoria dopo un'ora");
 
   console.log("Tutti i controlli superati.");
   await db.close();

@@ -10,7 +10,7 @@
  */
 import { VERSIONE, type Config } from "./config.js";
 import type { EsitoFrontiera } from "./nts.js";
-import { ErroreScrittura } from "./nts.js";
+import { dataOraLocale, ErroreScrittura } from "./nts.js";
 import { messaggio, registro } from "./registro.js";
 import { annoOrdine, clienteAbilitato, contoNts, ErroreOrdine, preparaOrdine, type ArticoloNts, type Colonne, type OrdinePreparato, type OrdineShop } from "./regole.js";
 import type { OrdineInCorso, Passaggio, StatoNts } from "./shop.js";
@@ -26,7 +26,7 @@ export interface PortaNts {
   articoli(codici: string[]): Promise<Map<string, ArticoloNts>>;
   ordineInTestord(anno: number, numero: number, conto: number): Promise<boolean>;
   testordPerRiferimento(anno: number, conto: number, rif: string): Promise<number | null>;
-  scrivi(o: OrdinePreparato, prova: boolean): Promise<{ id: number; righe: number }>;
+  scrivi(o: OrdinePreparato, prova: boolean): Promise<{ id: number; righe: number; dataIns: Date }>;
 }
 
 export interface PortaShop {
@@ -194,9 +194,9 @@ export class Connettore {
       await this.shop.passa(o.id, ["in_invio"], "in_frontiera", {
         idFrontiera: scritto.id,
         evento: "in_frontiera",
-        dettaglio: `Scritto in frontiera: ID ${scritto.id}, ${scritto.righe} righe`,
+        dettaglio: `Scritto in frontiera: ID ${scritto.id}, ${scritto.righe} righe, DATA_DOC ${dataOraLocale(prep.dataDoc).slice(0, 10)}, DATA_INS ${dataOraLocale(scritto.dataIns)} (ora locale)`,
       });
-      registro.info(`${rif}: scritto in frontiera, ID ${scritto.id}`);
+      registro.info(`${rif}: scritto in frontiera, ID ${scritto.id}, DATA_INS ${dataOraLocale(scritto.dataIns)}`);
     } catch (e) {
       await this.gestisciErroreInvio(o, rif, e);
     }
