@@ -18,8 +18,8 @@ export const azienda = {
   /** Codice univoco per la fatturazione elettronica (SDI). */
   codiceUnivoco: "1N74KED",
   email: "info@davsnc.it",
-  /** Numero per gli ordini (prefisso da verificare con l'ufficio: 0432 è Udine, Sondrio è 0342). */
-  telefonoOrdini: "0432 510616",
+  /** Numero per gli ordini. */
+  telefonoOrdini: "0342 510616",
   /** Numero WhatsApp per gli ordini: da decidere. */
   whatsapp: "" as string,
   instagram: "davsnc",
