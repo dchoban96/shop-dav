@@ -98,42 +98,63 @@ async function Statistiche() {
   const r = await riepilogo12m(cliente.id);
 
   if (r.articoli.length === 0) {
-    return <p className="mt-4 text-sm text-slate">Nessun acquisto negli ultimi 12 mesi.</p>;
+    return (
+      <div className="p-5">
+        <TitoloAcquisti />
+        <p className="mt-4 text-sm text-slate">Nessun acquisto negli ultimi 12 mesi.</p>
+      </div>
+    );
   }
   return (
     <>
-      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-        <div>
-          <dt className="text-slate">Spesa</dt>
-          <dd className="prezzo text-lg">{formattaPrezzo(r.fatturato)}</dd>
-        </div>
-        <div>
-          <dt className="text-slate">Articoli diversi</dt>
-          <dd className="prezzo text-lg">{r.nArticoli}</dd>
-        </div>
-        <div>
-          <dt className="text-slate">Righe ordinate</dt>
-          <dd className="prezzo text-lg">{r.nOrdini}</dd>
-        </div>
-        <div>
-          <dt className="text-slate">Ultimo acquisto</dt>
-          <dd className="prezzo text-lg">{formattaData(r.ultimaData, { month: "2-digit", year: "numeric" })}</dd>
-        </div>
-      </dl>
-      <p className="etichetta mt-5">Per articolo</p>
-      <ul className="mt-2 divide-y divide-ice text-sm">
-        {r.articoli.map((a) => (
-          <li key={a.cod_dav} className="py-2">
-            <Link href={`/catalogo/${encodeURIComponent(a.cod_dav)}`} className="block leading-snug hover:underline">
-              {a.descrizione}
-            </Link>
-            <p className="text-xs text-slate">
-              {a.n_ordini_12m} {a.n_ordini_12m === 1 ? "ordine" : "ordini"} · {a.qta_12m} {a.um ?? "conf."} · {formattaPrezzo(a.fatturato_12m)}
-            </p>
-          </li>
-        ))}
-      </ul>
-      {r.altri > 0 && <p className="mt-3 text-xs text-slate">e altri {r.altri} articoli.</p>}
+      {/* Testata fissa: titolo, totali ed etichetta della lista */}
+      <div className="shrink-0 border-b border-ice p-5 pb-3">
+        <TitoloAcquisti />
+        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+          <div>
+            <dt className="text-slate">Spesa</dt>
+            <dd className="prezzo text-lg">{formattaPrezzo(r.fatturato)}</dd>
+          </div>
+          <div>
+            <dt className="text-slate">Articoli diversi</dt>
+            <dd className="prezzo text-lg">{r.nArticoli}</dd>
+          </div>
+          <div>
+            <dt className="text-slate">Righe ordinate</dt>
+            <dd className="prezzo text-lg">{r.nOrdini}</dd>
+          </div>
+          <div>
+            <dt className="text-slate">Ultimo acquisto</dt>
+            <dd className="prezzo text-lg">{formattaData(r.ultimaData, { month: "2-digit", year: "numeric" })}</dd>
+          </div>
+        </dl>
+        <p className="etichetta mt-5">Per articolo</p>
+      </div>
+      {/* Solo la lista per articolo scorre */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 [scrollbar-width:thin]">
+        <ul className="divide-y divide-ice text-sm">
+          {r.articoli.map((a) => (
+            <li key={a.cod_dav} className="py-2">
+              <Link href={`/catalogo/${encodeURIComponent(a.cod_dav)}`} className="block leading-snug hover:underline">
+                {a.descrizione}
+              </Link>
+              <p className="text-xs text-slate">
+                {a.n_ordini_12m} {a.n_ordini_12m === 1 ? "ordine" : "ordini"} · {a.qta_12m} {a.um ?? "conf."} · {formattaPrezzo(a.fatturato_12m)}
+              </p>
+            </li>
+          ))}
+        </ul>
+        {r.altri > 0 && <p className="mt-3 text-xs text-slate">e altri {r.altri} articoli.</p>}
+      </div>
+    </>
+  );
+}
+
+function TitoloAcquisti() {
+  return (
+    <>
+      <p className="etichetta">I tuoi acquisti</p>
+      <h2 className="mt-1 text-xl">Ultimi 12 mesi</h2>
     </>
   );
 }
@@ -224,15 +245,16 @@ export default function HomeCliente() {
           {/* Da lg in su il pannello resta fermo sotto la testata e scorre per conto suo:
               le due colonne scorrono separatamente. */}
           <div className="flex flex-col rounded-lg border border-azzurro/40 bg-bianco lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)]">
-            <div className="shrink-0 border-b border-ice p-5 pb-4">
-              <p className="etichetta">I tuoi acquisti</p>
-              <h2 className="mt-1 text-xl">Ultimi 12 mesi</h2>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 [scrollbar-width:thin]">
-              <Suspense fallback={<p className="mt-4 text-sm text-slate">Carico le statistiche…</p>}>
-                <Statistiche />
-              </Suspense>
-            </div>
+            <Suspense
+              fallback={
+                <div className="p-5">
+                  <TitoloAcquisti />
+                  <p className="mt-4 text-sm text-slate">Carico le statistiche…</p>
+                </div>
+              }
+            >
+              <Statistiche />
+            </Suspense>
           </div>
         </aside>
       </div>

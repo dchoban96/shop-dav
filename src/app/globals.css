@@ -55,6 +55,17 @@ h3,
   }
 }
 
+/* Campi quantità: niente frecce su/giù del browser, ci sono già i tasti − e + */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 :focus-visible {
   outline: 2px solid var(--color-azzurro);
   outline-offset: 2px;
