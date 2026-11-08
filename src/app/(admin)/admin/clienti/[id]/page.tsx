@@ -7,6 +7,15 @@ import { schedaCliente } from "@/lib/dati/admin";
 import { formattaData, GIORNI_SETTIMANA, storicoCliente } from "@/lib/dati/ordini";
 import { Contenitore } from "@/components/Contenitore";
 
+/** Sconto percentuale implicito tra prezzo fisso e listino, es. "≈ 9,2 %"; null se non calcolabile o nullo. */
+function scontoImplicito(prezzo: number | null, listino: number | null): string | null {
+  if (prezzo === null || listino === null || listino <= 0) return null;
+  const pct = (1 - prezzo / listino) * 100;
+  if (Math.abs(pct) < 0.05) return null;
+  const n = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 1 }).format(Math.abs(pct));
+  return pct > 0 ? `≈ ${n} %` : `≈ +${n} %`;
+}
+
 export const metadata = { title: "Cliente" };
 
 type Props = { params: Promise<{ id: string }> };
@@ -76,14 +85,23 @@ async function Scheda({ params }: Props) {
                     <td className="py-1.5">
                       <span className="text-xs text-slate">{k.tipo}</span> {k.riferimento}
                     </td>
-                    <td className="py-1.5 text-right">{[k.sconto1, k.sconto2].filter((s) => s > 0).map((s) => `${s}%`).join(" + ") || "—"}</td>
+                    <td className="py-1.5 text-right">
+                      {[k.sconto1, k.sconto2].filter((s) => s > 0).map((s) => `${s}%`).join(" + ") || (
+                        <span className="text-slate" title="Ricavato da prezzo fisso e listino: lo sconto NTS ufficiale non è ancora importato">
+                          {scontoImplicito(k.prezzo_accordato, k.listino) ?? "—"}
+                        </span>
+                      )}
+                    </td>
                     <td className="py-1.5 text-right">{formattaPrezzo(k.prezzo_accordato) ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
-          <p className="mt-3 text-xs text-slate">Sola lettura: le condizioni si aggiornano dall’export NTS.</p>
+          <p className="mt-3 text-xs text-slate">
+            Sola lettura. I prezzi fissi vengono dall’ultimo netto fatturato; gli sconti in grigio sono ricavati dal listino (≈), quelli ufficiali
+            arriveranno con l’export condizioni NTS.
+          </p>
         </section>
       </div>
 

@@ -149,7 +149,7 @@ export async function elencoClienti(f: { q?: string; demo?: boolean; pagina?: nu
 export type SchedaCliente = {
   cliente: Record<string, unknown> & ClienteBreve;
   telefoni: { numero_e164: string; nome_contatto: string | null; usa_whatsapp: boolean }[];
-  condizioni: { tipo: string; riferimento: string; sconto1: number; sconto2: number; prezzo_accordato: number | null; valido_al: string | null }[];
+  condizioni: { tipo: string; riferimento: string; sconto1: number; sconto2: number; prezzo_accordato: number | null; listino: number | null; valido_al: string | null }[];
   ordini: OrdineAdmin[];
 };
 
@@ -160,11 +160,11 @@ export async function schedaCliente(id: number): Promise<SchedaCliente | null> {
   if (!cliente) return null;
   const [tel, cond, ord] = await Promise.all([
     db.from("clienti_telefoni").select("numero_e164, nome_contatto, usa_whatsapp").eq("cliente_id", id),
-    db.from("condizioni_cliente").select("tipo, cod_dav, sconto1, sconto2, prezzo_accordato, valido_al, famiglia:famiglie(nome), articolo:articoli(descrizione_pulita)").eq("cliente_id", id).order("tipo"),
+    db.from("condizioni_cliente").select("tipo, cod_dav, sconto1, sconto2, prezzo_accordato, valido_al, famiglia:famiglie(nome), articolo:articoli(descrizione_pulita, prezzo_listino)").eq("cliente_id", id).order("tipo"),
     db.from("ordini").select(CAMPI_ORDINE).eq("cliente_id", id).neq("stato", "bozza").order("creato_il", { ascending: false }).limit(50),
   ]);
   for (const r of [tel, cond, ord]) if (r.error) throw new Error(`schedaCliente: ${r.error.message}`);
-  type C = { tipo: string; cod_dav: string | null; sconto1: string; sconto2: string; prezzo_accordato: string | null; valido_al: string | null; famiglia: { nome: string } | { nome: string }[] | null; articolo: { descrizione_pulita: string | null } | { descrizione_pulita: string | null }[] | null };
+  type C = { tipo: string; cod_dav: string | null; sconto1: string; sconto2: string; prezzo_accordato: string | null; valido_al: string | null; famiglia: { nome: string } | { nome: string }[] | null; articolo: { descrizione_pulita: string | null; prezzo_listino: string | null } | { descrizione_pulita: string | null; prezzo_listino: string | null }[] | null };
   return {
     cliente: cliente as SchedaCliente["cliente"],
     telefoni: (tel.data ?? []) as SchedaCliente["telefoni"],
@@ -174,6 +174,7 @@ export async function schedaCliente(id: number): Promise<SchedaCliente | null> {
       sconto1: Number(c.sconto1),
       sconto2: Number(c.sconto2),
       prezzo_accordato: c.prezzo_accordato === null ? null : Number(c.prezzo_accordato),
+      listino: uno(c.articolo)?.prezzo_listino == null ? null : Number(uno(c.articolo)!.prezzo_listino),
       valido_al: c.valido_al,
     })),
     ordini: ((ord.data ?? []) as OrdineDb[]).map(normalizza),
