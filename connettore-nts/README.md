@@ -124,6 +124,24 @@ Fermarsi dopo ogni punto e controllare il risultato prima di passare al successi
 Prima di togliere `CLIENTI_ABILITATI`: creare il login `shop_dav` con `sql\crea_utente_shop_dav.sql`,
 metterlo nel `.env` al posto di `sa` e rilanciare `npm run controlla` (la lettura di `movord` deve risultare negata).
 
+## Ricognizione prezzi (una volta, prima dell'import di listino e sconti)
+
+Comando di **sola lettura** su DAVNTS: legge la funzione prezzo di Graphite (`dbo.FNMG_GPH_PREZZO_LISTART2`),
+le tabelle che usa, quelle con nomi da listini/sconti/prezzi e un caso di prova, e salva tutto in un file.
+Serve per progettare l'import del listino 2 e degli sconti cliente. Non scrive niente in NTS né in Supabase.
+
+1. Nel `.env` usare `sa` (serve il permesso di leggere le definizioni delle funzioni).
+2. Lanciare con un cliente e un articolo di cui si conosce il prezzo in Business (es. quelli di un ordine bloccato):
+   ```powershell
+   npm run build
+   npm run esplora-prezzi -- --cliente <codice conto NTS> --articolo <codice articolo>
+   ```
+   Opzioni: `--listino 2` (predefinito), `--funzione dbo.ALTRA_FUNZIONE`.
+3. Il file finisce in `esplorazione\prezzi-AAAAMMGG-hhmmss.txt` (fuori dal repo). Mandarlo a chi sviluppa lo shop,
+   con il prezzo che Business mostra per quel cliente e articolo (listino, sconti, netto).
+
+Di anagra e artico il file riporta solo le colonne utili ai prezzi: niente indirizzi, partite IVA o contatti.
+
 ## Punti aperti
 
 1. **Colonna di `testord` con il riferimento.** Dopo il punto 2 del piano di prova:

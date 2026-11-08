@@ -58,3 +58,4 @@ next-env.d.ts
 /connettore-nts/node_modules/
 /connettore-nts/dist/
 /connettore-nts/logs/
+/connettore-nts/esplorazione/

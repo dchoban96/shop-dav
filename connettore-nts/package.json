@@ -14,7 +14,8 @@
     "controlla": "node dist/controlla.js",
     "cerca-riferimento": "node dist/cerca-riferimento.js",
     "test": "tsx --test src/*.test.ts",
-    "tipi": "tsc -p tsconfig.json --noEmit"
+    "tipi": "tsc -p tsconfig.json --noEmit",
+    "esplora-prezzi": "node dist/esplora-prezzi.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.119.0",
