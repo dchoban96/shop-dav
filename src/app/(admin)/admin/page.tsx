@@ -5,20 +5,24 @@ import { formattaPrezzo } from "@/lib/dati/catalogo";
 import { elencoOrdini, leggiCruscotto } from "@/lib/dati/admin";
 import { formattaData } from "@/lib/dati/ordini";
 import { Contenitore } from "@/components/Contenitore";
+import { PannelloNts } from "@/components/admin/PannelloNts";
+import { contaDaControllare } from "@/lib/dati/nts";
 
 export const metadata = { title: "Cruscotto" };
 
 async function Contenuto() {
-  const [c, daGestire] = await Promise.all([leggiCruscotto(), elencoOrdini({ stato: "inviato" })]);
+  const [c, daGestire, daControllare] = await Promise.all([leggiCruscotto(), elencoOrdini({ stato: "inviato" }), contaDaControllare()]);
   const numeri = [
-    { valore: c.daGestire, testo: "ordini da gestire", href: "/admin/ordini?stato=inviato" },
+    { valore: daControllare ?? "—", testo: "ordini da controllare (NTS)", href: "/admin/ordini?nts=da_controllare" },
+    { valore: c.daGestire, testo: "ordini ricevuti, non ancora in NTS", href: "/admin/ordini?stato=inviato" },
     { valore: c.oggi, testo: "ordini di oggi", href: "/admin/ordini" },
     { valore: c.clienti, testo: "clienti da gestionale", href: "/admin/clienti" },
     { valore: c.clientiDemo, testo: "clienti demo", href: "/admin/clienti?demo=1" },
   ];
   return (
     <>
-      <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <PannelloNts />
+      <dl className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {numeri.map((n) => (
           <Link key={n.testo} href={n.href} className="rounded-lg bg-ice p-5 hover:bg-azzurro/30">
             <dd className="font-serif text-4xl">{n.valore}</dd>
@@ -29,7 +33,7 @@ async function Contenuto() {
 
       <section className="mt-10">
         <div className="flex items-baseline justify-between gap-4">
-          <h2 className="text-2xl">Da inserire nel gestionale</h2>
+          <h2 className="text-2xl">Ricevuti, non ancora in NTS</h2>
           <Link href="/admin/ordini?stato=inviato" className="text-sm font-semibold underline underline-offset-4">
             Tutti
           </Link>

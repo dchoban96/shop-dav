@@ -25,6 +25,7 @@ async function main() {
     do $$ begin
       if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated; end if;
       if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon; end if;
+      if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role; end if;
     end $$;
   `);
 
@@ -107,6 +108,42 @@ async function main() {
   }
   assert(doppia, "conferma_ordine su ordine già inviato deve fallire");
 
+  // NTS: alla conferma riferimento e coda; claim atomico con righe; passaggi condizionati
+  const o1 = (await db.query<{ riferimento_nts: string; stato_nts: string }>(`select riferimento_nts, stato_nts from ordini where id = 1`)).rows[0];
+  assert(o1.riferimento_nts === "SHOP-000001" && o1.stato_nts === "da_inviare", `riferimento alla conferma: ${JSON.stringify(o1)}`);
+  await db.exec(`insert into ordini (cliente_id, stato) values (2, 'bozza')`);
+  const bozza = (await db.query<{ s: string | null; r: string | null }>(`select stato_nts s, riferimento_nts r from ordini where stato = 'bozza'`)).rows[0];
+  assert(bozza.s === null && bozza.r === null, `carrello senza stato NTS: ${JSON.stringify(bozza)}`);
+  type Claim = { id: number; riferimento_nts: string; cliente: { codice_nts: string }; righe: { cod_dav: string; quantita: string; prezzo_listino: string; sconto1: string; prezzo_accordato: string | null }[] }[];
+  const presi = (await db.query<{ c: Claim }>(`select claim_ordini_nts(5) c`)).rows[0].c;
+  assert(presi.length === 1 && presi[0].riferimento_nts === "SHOP-000001" && presi[0].cliente.codice_nts === "C001", `claim: ${JSON.stringify(presi)}`);
+  const rFar = presi[0].righe.find((r) => r.cod_dav === "FARMIR")!;
+  assert(rFar.quantita === "2.000" && rFar.prezzo_listino === "30.0000" && rFar.sconto1 === "20.000", `claim righe come testo: ${JSON.stringify(rFar)}`);
+  assert(presi[0].righe.find((r) => r.cod_dav === "A4803")!.prezzo_accordato === "17.5000", "claim: prezzo accordato");
+  const ancora = (await db.query<{ c: Claim }>(`select claim_ordini_nts(5) c`)).rows[0].c;
+  assert(ancora.length === 0, "claim: lo stesso ordine non va preso due volte");
+  const sbagliato = (await db.query<{ ok: boolean }>(`select passa_stato_nts(1, '{da_inviare}', 'in_frontiera') ok`)).rows[0].ok;
+  assert(sbagliato === false, "passa_stato_nts da stato sbagliato non deve cambiare nulla");
+  // prova a secco: torna da_inviare e non viene ripreso in modalità prova, sì in modalità reale
+  await db.query(`select passa_stato_nts(1, '{in_invio}', 'da_inviare', p_evento => 'prova_ok', p_prova_ok => true)`);
+  assert((await db.query<{ c: Claim }>(`select claim_ordini_nts(5, true) c`)).rows[0].c.length === 0, "prova: ordine già provato non va ripreso");
+  assert((await db.query<{ c: Claim }>(`select claim_ordini_nts(5, false) c`)).rows[0].c.length === 1, "reale: ordine provato va preso");
+  await db.query(`select passa_stato_nts(1, '{in_invio}', 'in_frontiera', p_id_frontiera => 900)`);
+  await db.query(`select passa_stato_nts(1, '{in_frontiera}', 'in_nts', p_numero_nts => 4321)`);
+  const fin = (await db.query<{ stato: string; stato_nts: string; numero_nts: number; id_frontiera: string; tentativi_nts: number }>(`select stato, stato_nts, numero_nts, id_frontiera, tentativi_nts from ordini where id = 1`)).rows[0];
+  assert(fin.stato === "inserito_nts" && fin.stato_nts === "in_nts" && fin.numero_nts === 4321 && Number(fin.id_frontiera) === 900 && fin.tentativi_nts === 2, `in_nts: ${JSON.stringify(fin)}`);
+  const nlog = (await db.query<{ n: string }>(`select count(*) n from log_nts where ordine_id = 1`)).rows[0];
+  assert(Number(nlog.n) === 5, `log_nts: ${nlog.n} righe invece di 5`);
+  // cliente demo: niente coda NTS
+  await db.exec(`
+    insert into clienti (codice_nts, ragione_sociale, demo) values ('DEMO1', 'Demo', true);
+    insert into ordini (cliente_id, stato) values (3, 'bozza');
+    insert into righe_ordine (ordine_id, cod_dav, descrizione, quantita) select id, 'ALTRO', 'ALTRO', 1 from ordini where cliente_id = 3;
+  `);
+  await db.query(`select * from conferma_ordine((select id from ordini where cliente_id = 3), current_date + 1, null)`);
+  const demo = (await db.query<{ s: string | null; r: string | null }>(`select stato_nts s, riferimento_nts r from ordini where cliente_id = 3`)).rows[0];
+  assert(demo.s === null && demo.r !== null, `ordine demo fuori da NTS: ${JSON.stringify(demo)}`);
+
   // RLS: cliente C001 (utente u1) vede solo le proprie condizioni, non quelle di C002
   await db.exec(`
     insert into auth.users (id) values ('11111111-1111-1111-1111-111111111111'), ('22222222-2222-2222-2222-222222222222');
@@ -147,10 +184,26 @@ async function main() {
     ordineNegato = true;
   }
   assert(ordineNegato, "ordine per un altro cliente deve essere negato");
+  // il cliente non può toccare le colonne NTS, nemmeno sul proprio carrello
+  await db.exec(`reset role; insert into ordini (cliente_id, stato) values (1, 'bozza'); set role authenticated;`);
+  let ntsNegato = false;
+  try {
+    await db.query(`update ordini set stato_nts = 'in_nts' where cliente_id = 1 and stato = 'bozza'`);
+  } catch {
+    ntsNegato = true;
+  }
+  assert(ntsNegato, "cliente che scrive stato_nts deve essere negato");
+  let claimNegato = false;
+  try {
+    await db.query(`select claim_ordini_nts(5)`);
+  } catch {
+    claimNegato = true;
+  }
+  assert(claimNegato, "claim_ordini_nts riservato al service role");
 
   await db.exec(`select set_config('request.jwt.claim.sub', '22222222-2222-2222-2222-222222222222', false);`);
   const adm = await db.query<{ n: string }>(`select count(*) n from clienti`);
-  assert(Number(adm.rows[0].n) === 2, `RLS admin vede ${adm.rows[0].n} clienti invece di 2`);
+  assert(Number(adm.rows[0].n) === 3, `RLS admin vede ${adm.rows[0].n} clienti invece di 3`); // C001, C002, DEMO1
   await db.exec(`reset role;`);
 
   console.log("Tutti i controlli superati.");

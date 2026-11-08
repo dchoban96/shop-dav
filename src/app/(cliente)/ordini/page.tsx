@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { BottoneLink } from "@/components/Bottone";
 import { formattaPrezzo } from "@/lib/dati/catalogo";
-import { clientePerCodice, ETICHETTA_STATO, formattaData, ordiniCliente } from "@/lib/dati/ordini";
+import { clientePerCodice, ETICHETTA_CLIENTE, formattaData, ordiniCliente } from "@/lib/dati/ordini";
 import { leggiSessione } from "@/lib/sessione";
 import { Contenitore } from "@/components/Contenitore";
 
@@ -42,7 +42,7 @@ async function Elenco() {
             </div>
             <div className="text-right">
               <p className="prezzo">{formattaPrezzo(o.totale_netto)}</p>
-              <p className="text-xs font-semibold text-slate">{ETICHETTA_STATO[o.stato]}</p>
+              <p className="text-xs font-semibold text-slate">{ETICHETTA_CLIENTE[o.stato]}</p>
             </div>
           </Link>
         </li>

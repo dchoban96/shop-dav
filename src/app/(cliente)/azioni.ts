@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { inviaEmailOrdine } from "@/lib/email/ordine";
 import { leggiImpostazioni } from "@/lib/dati/admin";
+import { controllaConnettore } from "@/lib/dati/nts";
 import {
   aggiornaRiga,
   aggiungiAlCarrello,
@@ -89,7 +90,11 @@ export async function rimuovi(formData: FormData): Promise<void> {
   refresh();
 }
 
-/** Conferma il carrello: prezzi copiati, stato inviato, email all'ufficio. */
+/**
+ * Conferma il carrello: prezzi copiati, stato inviato, email all'ufficio.
+ * Il database assegna il riferimento SHOP-000123 e mette l'ordine in coda per NTS
+ * (stato_nts = da_inviare): lo inserisce il connettore in LAN.
+ */
 export async function conferma(formData: FormData): Promise<void> {
   const c = await clienteCorrente();
   const data = String(formData.get("data_consegna") ?? "");
@@ -108,6 +113,8 @@ export async function conferma(formData: FormData): Promise<void> {
     const esito = await inviaEmailOrdine({ cliente: c, ordine: dettaglio.ordine, righe: dettaglio.righe, emailUfficio: email_ordini });
     if (esito.inviata) await segnaEmailInviata(ordine.id);
   }
+  // Se il connettore NTS è fermo, l'ufficio lo deve sapere adesso (email al massimo una all'ora).
+  if (!c.demo) await controllaConnettore().catch(() => undefined);
   refresh();
   redirect(`/ordini/${ordine.id}?confermato=1`);
 }

@@ -8,10 +8,12 @@ import { ETICHETTA_STATO, formattaData, type StatoOrdine } from "@/lib/dati/ordi
 import { aggiornaStato } from "../../azioni";
 import { Contenitore } from "@/components/Contenitore";
 import { riepilogoSconti, testoSconto } from "@/lib/sconti";
+import { BadgeNts } from "@/components/admin/StatoNts";
+import { SezioneNts } from "@/components/admin/SezioneNts";
 
 export const metadata = { title: "Ordine" };
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ nts?: string }> };
 
 /** Passaggi di stato proposti all'ufficio, nell'ordine del lavoro. */
 const PROSSIMI: Record<StatoOrdine, StatoOrdine[]> = {
@@ -23,12 +25,14 @@ const PROSSIMI: Record<StatoOrdine, StatoOrdine[]> = {
   annullato: ["inviato"],
 };
 
-async function Dettaglio({ params }: Props) {
-  const { id } = await params;
+async function Dettaglio({ params, searchParams }: Props) {
+  const [{ id }, { nts: messaggioNts }] = await Promise.all([params, searchParams]);
   const dati = Number.isInteger(Number(id)) ? await ordineAdmin(Number(id)) : null;
   if (!dati) notFound();
   const { ordine, righe } = dati;
   const { listino, risparmio } = riepilogoSconti(righe);
+  // Con l'invio automatico l'ordine entra in NTS dal connettore: niente "Segna inserito in NTS" a mano qui.
+  const prossimi = ordine.stato_nts ? PROSSIMI[ordine.stato].filter((s) => s !== "inserito_nts") : PROSSIMI[ordine.stato];
 
   return (
     <>
@@ -39,7 +43,10 @@ async function Dettaglio({ params }: Props) {
             Inviato il {formattaData(ordine.creato_il, { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
-        <BadgeStato stato={ordine.stato} />
+        <div className="flex flex-wrap items-center gap-2">
+          <BadgeStato stato={ordine.stato} />
+          <BadgeNts stato={ordine.stato_nts} />
+        </div>
       </div>
 
       <dl className="mt-6 grid gap-x-8 gap-y-2 rounded-lg bg-ice p-4 text-sm sm:grid-cols-[180px_1fr]">
@@ -58,6 +65,8 @@ async function Dettaglio({ params }: Props) {
         <dt className="text-slate">Email</dt>
         <dd>{ordine.email_inviata_il ? `inviata il ${formattaData(ordine.email_inviata_il, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : "non inviata"}</dd>
       </dl>
+
+      <SezioneNts ordine={ordine} messaggio={messaggioNts} />
 
       <div className="mt-6 overflow-x-auto">
         <table className="w-full min-w-[720px] text-sm">
@@ -122,11 +131,11 @@ async function Dettaglio({ params }: Props) {
 
       <section className="mt-8 rounded-lg border border-azzurro/40 p-5">
         <h2 className="text-xl">Stato</h2>
-        {PROSSIMI[ordine.stato].length === 0 ? (
+        {prossimi.length === 0 ? (
           <p className="mt-2 text-sm text-slate">Nessun passaggio successivo.</p>
         ) : (
           <div className="mt-3 flex flex-wrap gap-3">
-            {PROSSIMI[ordine.stato].map((s) => (
+            {prossimi.map((s) => (
               <form key={s} action={aggiornaStato}>
                 <input type="hidden" name="ordine" value={ordine.id} />
                 <input type="hidden" name="stato" value={s} />
@@ -150,7 +159,7 @@ async function Dettaglio({ params }: Props) {
   );
 }
 
-export default function OrdineAdminPagina({ params }: Props) {
+export default function OrdineAdminPagina({ params, searchParams }: Props) {
   return (
     <Contenitore className="py-8">
       <p className="mb-4 text-sm">
@@ -159,7 +168,7 @@ export default function OrdineAdminPagina({ params }: Props) {
         </Link>
       </p>
       <Suspense fallback={<p className="text-sm text-slate">Carico l’ordine…</p>}>
-        <Dettaglio params={params} />
+        <Dettaglio params={params} searchParams={searchParams} />
       </Suspense>
     </Contenitore>
   );

@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { Bottone } from "@/components/Bottone";
 import { formattaPrezzo } from "@/lib/dati/catalogo";
-import { clientePerCodice, ETICHETTA_STATO, formattaData, ordinePerId } from "@/lib/dati/ordini";
+import { clientePerCodice, ETICHETTA_CLIENTE, formattaData, ordinePerId } from "@/lib/dati/ordini";
 import { leggiSessione } from "@/lib/sessione";
 import { riordina } from "../../azioni";
 import { Contenitore } from "@/components/Contenitore";
@@ -30,9 +30,9 @@ async function Dettaglio({ params, searchParams }: Props) {
     <>
       {confermato && (
         <div role="status" className="mt-6 rounded-lg bg-navy px-5 py-4 text-bianco">
-          <p className="font-serif text-xl">Ordine inviato, grazie.</p>
+          <p className="font-serif text-xl">Ordine ricevuto, grazie.</p>
           <p className="mt-1 text-sm">
-            L’ufficio DAV lo conferma a breve.{" "}
+            L’ufficio DAV lo prende in carico a breve.{" "}
             {ordine.email_inviata_il ? "Copia inviata via email." : "Email non inviata: invio in configurazione, l’ordine è comunque registrato."}
           </p>
           {conSconto && <p className="mt-1 text-sm">Con le tue condizioni risparmi {formattaPrezzo(risparmio)} sul listino.</p>}
@@ -46,7 +46,7 @@ async function Dettaglio({ params, searchParams }: Props) {
             Inviato il {formattaData(ordine.creato_il, { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
-        <span className="rounded-md border border-azzurro/40 bg-bianco px-3 py-1.5 text-sm font-semibold">{ETICHETTA_STATO[ordine.stato]}</span>
+        <span className="rounded-md border border-azzurro/40 bg-bianco px-3 py-1.5 text-sm font-semibold">{ETICHETTA_CLIENTE[ordine.stato]}</span>
       </div>
 
       <dl className="mt-6 grid gap-x-8 gap-y-2 rounded-lg border border-azzurro/40 bg-bianco p-4 text-sm sm:grid-cols-2">

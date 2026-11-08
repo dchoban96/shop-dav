@@ -53,3 +53,8 @@ next-env.d.ts
 /dist/
 .vinext/
 .cloudflare/
+
+# connettore NTS (gira sulla macchina in LAN)
+/connettore-nts/node_modules/
+/connettore-nts/dist/
+/connettore-nts/logs/

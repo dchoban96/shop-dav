@@ -8,6 +8,10 @@ Migrazioni SQL in `migrations/`, in ordine:
 4. `0004_viste_catalogo.sql` — viste `v_marchi_catalogo`, `v_famiglie_catalogo`
 5. `0005_ordini.sql` — carrello, `conferma_ordine`
 6. `0006_prezzi_cliente.sql` — `prezzi_cliente` (prezzi di una lista di articoli in un colpo solo)
+7. `0007_ordini_nts.sql` — invio automatico a NTS: colonne `stato_nts`/`riferimento_nts`… su `ordini`,
+   tabella `log_nts`, riferimento `SHOP-000123` assegnato alla conferma, `claim_ordini_nts` e
+   `passa_stato_nts` (solo service role, usate dal connettore in `connettore-nts/`).
+   Va applicata **prima** di pubblicare lo shop che la usa.
 
 ## Applicarle
 

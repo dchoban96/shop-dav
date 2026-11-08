@@ -1,19 +1,28 @@
 /**
- * Email di conferma ordine (STRUTTURA, sezione 9): all'ufficio e, se c'è, al cliente.
+ * Email di conferma ordine (STRUTTURA, sezione 9; BRIEF_INTEGRAZIONE_NTS, sezione 6).
+ * - All'ufficio: oggetto con il riferimento `[SHOP-000123]`, link all'ordine nel portale
+ *   e la riga sull'inserimento automatico in NTS. Resta come avviso e rete di sicurezza.
+ * - Al cliente, se ha un'email: copia dell'ordine, senza link all'area ufficio né gestionale.
  * Con RESEND_API_KEY assente l'email non parte: si registra in console e l'ordine
  * resta con `email_inviata_il` vuoto, visibile nel dettaglio.
  */
-import { Resend } from "resend";
 import { formattaPrezzo } from "@/lib/dati/catalogo";
 import { formattaData, type Cliente, type Ordine, type RigaOrdine } from "@/lib/dati/ordini";
 import { riepilogoSconti, testoSconto } from "@/lib/sconti";
+import { escapeHtml as h, inviaEmail } from "@/lib/email/invio";
 
 type Dati = { cliente: Cliente; ordine: Ordine; righe: RigaOrdine[]; emailUfficio?: string };
+type Opzioni = { urlAdmin?: string; notaUfficio?: string };
 
-const h = (s: string | null | undefined) =>
-  String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+/** Riga per l'ufficio su cosa succede in NTS. Vuota se l'ordine non ha riferimento (migrazione 0007 non applicata). */
+export function notaNts(ordine: Ordine): string | undefined {
+  if (!ordine.riferimento_nts) return undefined;
+  if (ordine.stato_nts === "da_inviare") return `Verrà inserito in NTS automaticamente (riferimento ${ordine.riferimento_nts}).`;
+  if (ordine.stato_nts === null) return "Ordine di un cliente demo: non viene inserito in NTS.";
+  return `Stato NTS: ${ordine.stato_nts}.`;
+}
 
-export function htmlOrdine({ cliente, ordine, righe }: Dati, urlAdmin: string): string {
+export function htmlOrdine({ cliente, ordine, righe }: Dati, opz: Opzioni = {}): string {
   const righeHtml = righe
     .map(
       (r) => `<tr>
@@ -36,9 +45,11 @@ export function htmlOrdine({ cliente, ordine, righe }: Dati, urlAdmin: string): 
   <h1 style="font-weight:normal;font-size:22px;margin:0 0 4px">Ordine n. ${ordine.numero}</h1>
   <p style="margin:0 0 16px;color:#51627A;font-family:Arial,sans-serif;font-size:14px">
     ${h(cliente.ragione_sociale)} · codice ${h(cliente.codice_nts)}<br>
+    ${ordine.riferimento_nts ? `Riferimento: <strong>${h(ordine.riferimento_nts)}</strong><br>` : ""}
     Consegna richiesta: <strong>${h(formattaData(ordine.data_consegna_richiesta))}</strong><br>
     Inviato il ${h(formattaData(ordine.creato_il, { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }))}
   </p>
+  ${opz.notaUfficio ? `<p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:14px;background:#EEF3F7;padding:8px 12px">${h(opz.notaUfficio)}</p>` : ""}
   <table style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;font-size:14px">
     <thead><tr style="background:#EEF3F7;text-align:left">
       <th style="padding:6px 8px">Codice</th><th style="padding:6px 8px">Articolo</th><th style="padding:6px 8px;text-align:right">Q.tà</th><th style="padding:6px 8px">UM</th><th style="padding:6px 8px;text-align:right">Listino</th><th style="padding:6px 8px;text-align:right">Sconto</th><th style="padding:6px 8px;text-align:right">Prezzo</th>
@@ -47,11 +58,11 @@ export function htmlOrdine({ cliente, ordine, righe }: Dati, urlAdmin: string): 
   </table>
   <p style="font-family:Arial,sans-serif;font-size:14px;text-align:right;margin:12px 0">${sconti}Totale netto (IVA esclusa): <strong>${formattaPrezzo(ordine.totale_netto) ?? "da definire"}</strong></p>
   ${ordine.note ? `<p style="font-family:Arial,sans-serif;font-size:14px"><strong>Note ordine:</strong> ${h(ordine.note)}</p>` : ""}
-  <p style="font-family:Arial,sans-serif;font-size:13px;color:#51627A"><a href="${h(urlAdmin)}" style="color:#122C5A">Apri l’ordine nel portale</a></p>
+  ${opz.urlAdmin ? `<p style="font-family:Arial,sans-serif;font-size:13px;color:#51627A"><a href="${h(opz.urlAdmin)}" style="color:#122C5A">Apri l’ordine nel portale</a></p>` : ""}
 </body></html>`;
 }
 
-export function testoOrdine({ cliente, ordine, righe }: Dati): string {
+export function testoOrdine({ cliente, ordine, righe }: Dati, opz: Opzioni = {}): string {
   const r = righe
     .map((x) => {
       const sc = testoSconto(x);
@@ -61,31 +72,42 @@ export function testoOrdine({ cliente, ordine, righe }: Dati): string {
     .join("\n");
   const { listino, risparmio } = riepilogoSconti(righe);
   const sconti = risparmio >= 0.005 ? [`Totale a listino: ${formattaPrezzo(listino)}`, `Sconto cliente: −${formattaPrezzo(risparmio)}`] : [];
-  return `Ordine n. ${ordine.numero}\n${cliente.ragione_sociale} (${cliente.codice_nts})\nConsegna richiesta: ${formattaData(ordine.data_consegna_richiesta)}\n\n${r}\n\n${sconti.map((x) => x + "\n").join("")}Totale netto: ${formattaPrezzo(ordine.totale_netto) ?? "da definire"}${ordine.note ? `\nNote: ${ordine.note}` : ""}`;
+  return [
+    `Ordine n. ${ordine.numero}`,
+    `${cliente.ragione_sociale} (${cliente.codice_nts})`,
+    ...(ordine.riferimento_nts ? [`Riferimento: ${ordine.riferimento_nts}`] : []),
+    `Consegna richiesta: ${formattaData(ordine.data_consegna_richiesta)}`,
+    ...(opz.notaUfficio ? ["", opz.notaUfficio] : []),
+    "",
+    r,
+    "",
+    ...sconti,
+    `Totale netto: ${formattaPrezzo(ordine.totale_netto) ?? "da definire"}`,
+    ...(ordine.note ? [`Note: ${ordine.note}`] : []),
+    ...(opz.urlAdmin ? ["", `Apri l'ordine: ${opz.urlAdmin}`] : []),
+  ].join("\n");
 }
 
+/** Email all'ufficio (sempre) e copia al cliente (se ha un'email). `inviata` si riferisce a quella dell'ufficio. */
 export async function inviaEmailOrdine(dati: Dati): Promise<{ inviata: boolean; motivo?: string }> {
-  const chiave = process.env.RESEND_API_KEY;
   const ufficio = dati.emailUfficio || process.env.EMAIL_ORDINI || "info@davsnc.it";
-  const mittente = process.env.EMAIL_MITTENTE || "DAV Ordini <ordini@davsnc.it>";
   const urlAdmin = `${process.env.APP_URL || "http://localhost:3000"}/admin/ordini/${dati.ordine.id}`;
-  const oggetto = `Ordine n. ${dati.ordine.numero} – ${dati.cliente.ragione_sociale}`;
+  const rif = dati.ordine.riferimento_nts ? `[${dati.ordine.riferimento_nts}] ` : "";
+  const opz: Opzioni = { urlAdmin, notaUfficio: notaNts(dati.ordine) };
 
-  if (!chiave) {
-    console.log(`[email non inviata: RESEND_API_KEY assente] A: ${ufficio}${dati.cliente.email ? `, ${dati.cliente.email}` : ""}\n${testoOrdine(dati)}`);
-    return { inviata: false, motivo: "RESEND_API_KEY non configurata" };
+  const esito = await inviaEmail({
+    a: [ufficio],
+    oggetto: `${rif}Ordine n. ${dati.ordine.numero} – ${dati.cliente.ragione_sociale}`,
+    html: htmlOrdine(dati, opz),
+    testo: testoOrdine(dati, opz),
+  });
+  if (dati.cliente.email) {
+    await inviaEmail({
+      a: [dati.cliente.email],
+      oggetto: `Ordine n. ${dati.ordine.numero} ricevuto – D.A.V.`,
+      html: htmlOrdine(dati),
+      testo: testoOrdine(dati),
+    });
   }
-  try {
-    const resend = new Resend(chiave);
-    const destinatari = [ufficio, ...(dati.cliente.email ? [dati.cliente.email] : [])];
-    const { error } = await resend.emails.send({ from: mittente, to: destinatari, subject: oggetto, html: htmlOrdine(dati, urlAdmin), text: testoOrdine(dati) });
-    if (error) {
-      console.error("Resend:", error);
-      return { inviata: false, motivo: error.message };
-    }
-    return { inviata: true };
-  } catch (e) {
-    console.error("Resend:", e);
-    return { inviata: false, motivo: e instanceof Error ? e.message : "errore invio" };
-  }
+  return esito;
 }

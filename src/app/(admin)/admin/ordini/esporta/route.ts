@@ -17,6 +17,7 @@ export async function GET(request: Request) {
   const u = new URL(request.url).searchParams;
   const dati = await righePerEsportazione({
     stato: u.get("stato") ?? undefined,
+    nts: u.get("nts") ?? undefined,
     q: u.get("q") ?? undefined,
     dal: u.get("dal") ?? undefined,
     al: u.get("al") ?? undefined,
@@ -25,6 +26,7 @@ export async function GET(request: Request) {
   const intestazione = [
     "numero_ordine", "data_ordine", "stato", "codice_cliente", "ragione_sociale", "consegna_richiesta", "note_ordine",
     "cod_dav", "descrizione", "quantita", "um", "prezzo_listino", "sconto1", "sconto2", "prezzo_accordato", "prezzo_finale", "note_riga",
+    "riferimento_nts", "stato_nts", "numero_nts",
   ];
   const righe = [intestazione.join(";")];
   for (const { ordine: o, righe: rr } of dati) {
@@ -34,6 +36,7 @@ export async function GET(request: Request) {
           o.numero, o.creato_il.slice(0, 10), o.stato, o.cliente?.codice_nts, o.cliente?.ragione_sociale, o.data_consegna_richiesta, o.note,
           r.cod_dav, r.descrizione, numero(r.quantita), r.um, numero(r.prezzo_listino), numero(r.sconto1), numero(r.sconto2),
           numero(r.prezzo_accordato), numero(r.prezzo_finale), r.note,
+          o.riferimento_nts, o.stato_nts, o.numero_nts,
         ]
           .map(cella)
           .join(";"),

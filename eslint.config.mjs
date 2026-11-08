@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Connettore NTS: progetto Node a parte, con il suo tsconfig e i suoi pacchetti.
+    "connettore-nts/**",
   ]),
 ]);
 

@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { BadgeStato } from "@/components/admin/StatoOrdine";
+import { BadgeNts } from "@/components/admin/StatoNts";
+import { ETICHETTA_NTS } from "@/lib/dati/nts";
 import { formattaPrezzo } from "@/lib/dati/catalogo";
-import { elencoOrdini, STATI_ADMIN } from "@/lib/dati/admin";
+import { elencoOrdini, FILTRI_NTS, STATI_ADMIN } from "@/lib/dati/admin";
 import { ETICHETTA_STATO, formattaData } from "@/lib/dati/ordini";
 import { Contenitore } from "@/components/Contenitore";
 
 export const metadata = { title: "Ordini" };
 
-type Params = { stato?: string; q?: string; dal?: string; al?: string; pagina?: string };
+type Params = { stato?: string; nts?: string; q?: string; dal?: string; al?: string; pagina?: string };
 type Props = { searchParams: Promise<Params> };
 
 const campo = "rounded-md border border-azzurro bg-bianco px-3 py-2 text-sm";
@@ -23,16 +25,16 @@ function query(p: Params, extra: Record<string, string | undefined> = {}): strin
 async function Elenco({ searchParams }: Props) {
   const p = await searchParams;
   const pagina = Math.max(1, Number(p.pagina) || 1);
-  const { ordini, totale, pagine } = await elencoOrdini({ stato: p.stato, q: p.q, dal: p.dal, al: p.al, pagina });
-  const filtri = { stato: p.stato, q: p.q, dal: p.dal, al: p.al };
+  const { ordini, totale, pagine } = await elencoOrdini({ stato: p.stato, nts: p.nts, q: p.q, dal: p.dal, al: p.al, pagina });
+  const filtri = { stato: p.stato, nts: p.nts, q: p.q, dal: p.dal, al: p.al };
 
   return (
     <>
-      <form method="get" className="grid gap-3 md:grid-cols-[1fr_180px_160px_160px_auto]">
+      <form method="get" className="grid gap-3 md:grid-cols-[1fr_170px_170px_150px_150px_auto]">
         <label className="sr-only" htmlFor="q">
           Cerca
         </label>
-        <input id="q" name="q" type="search" defaultValue={p.q ?? ""} placeholder="Numero ordine, codice o nome cliente" className={campo} />
+        <input id="q" name="q" type="search" defaultValue={p.q ?? ""} placeholder="Numero, SHOP-000123, codice o nome cliente" className={campo} />
         <label className="sr-only" htmlFor="stato">
           Stato
         </label>
@@ -41,6 +43,17 @@ async function Elenco({ searchParams }: Props) {
           {STATI_ADMIN.map((s) => (
             <option key={s} value={s}>
               {ETICHETTA_STATO[s]}
+            </option>
+          ))}
+        </select>
+        <label className="sr-only" htmlFor="nts">
+          Stato NTS
+        </label>
+        <select id="nts" name="nts" defaultValue={p.nts ?? ""} className={campo}>
+          <option value="">NTS: tutti</option>
+          {FILTRI_NTS.map((s) => (
+            <option key={s} value={s}>
+              {s === "da_controllare" ? "NTS: da controllare" : `NTS: ${ETICHETTA_NTS[s].toLowerCase()}`}
             </option>
           ))}
         </select>
@@ -67,7 +80,7 @@ async function Elenco({ searchParams }: Props) {
       </div>
 
       <div className="mt-3 overflow-x-auto rounded-lg border border-azzurro/40">
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="w-full min-w-[1100px] text-sm">
           <thead className="bg-ice text-left">
             <tr>
               <th className="etichetta px-3 py-2">N.</th>
@@ -77,6 +90,10 @@ async function Elenco({ searchParams }: Props) {
               <th className="etichetta px-3 py-2 text-right">Righe</th>
               <th className="etichetta px-3 py-2 text-right">Totale</th>
               <th className="etichetta px-3 py-2">Stato</th>
+              <th className="etichetta px-3 py-2">Stato NTS</th>
+              <th className="etichetta px-3 py-2">Riferimento</th>
+              <th className="etichetta px-3 py-2 text-right">N. NTS</th>
+              <th className="etichetta px-3 py-2">Errore</th>
             </tr>
           </thead>
           <tbody>
@@ -100,11 +117,19 @@ async function Elenco({ searchParams }: Props) {
                 <td className="px-3 py-2">
                   <BadgeStato stato={o.stato} />
                 </td>
+                <td className="px-3 py-2">
+                  <BadgeNts stato={o.stato_nts} />
+                </td>
+                <td className="px-3 py-2 font-mono text-xs">{o.riferimento_nts ?? "—"}</td>
+                <td className="px-3 py-2 text-right">{o.numero_nts ?? "—"}</td>
+                <td className="max-w-[240px] truncate px-3 py-2 text-xs text-rosso" title={o.errore_nts ?? undefined}>
+                  {o.errore_nts ?? ""}
+                </td>
               </tr>
             ))}
             {ordini.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-slate">
+                <td colSpan={11} className="px-3 py-8 text-center text-slate">
                   Nessun ordine con questi filtri.
                 </td>
               </tr>

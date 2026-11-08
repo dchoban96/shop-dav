@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { cambiaStatoOrdine, salvaImpostazioni, STATI_ADMIN } from "@/lib/dati/admin";
 import type { StatoOrdine } from "@/lib/dati/ordini";
+import { reinviaOrdineNts, segnaInseritoAMano } from "@/lib/dati/nts";
 import { leggiSessioneAdmin } from "@/lib/sessione";
 
 async function richiediAdmin(): Promise<void> {
@@ -30,4 +31,30 @@ export async function aggiornaImpostazioni(formData: FormData): Promise<void> {
   await salvaImpostazioni({ soglia_esaurimento: soglia, email_ordini: email });
   refresh();
   redirect("/admin/impostazioni?salvato=1");
+}
+
+/**
+ * NTS, "Reinvia" (campi: ordine, conferma). Solo per ordini in errore mai arrivati in frontiera;
+ * serve la spunta di conferma. Il connettore cerca comunque il riferimento prima di scrivere.
+ */
+export async function reinviaNts(formData: FormData): Promise<void> {
+  await richiediAdmin();
+  const id = Number(formData.get("ordine"));
+  if (!Number.isInteger(id)) return;
+  if (formData.get("conferma") !== "si") redirect(`/admin/ordini/${id}?nts=conferma`);
+  const ok = await reinviaOrdineNts(id);
+  refresh();
+  redirect(`/admin/ordini/${id}?nts=${ok ? "reinviato" : "invariato"}`);
+}
+
+/** NTS, "Segna inserito a mano" (campi: ordine, nota obbligatoria). */
+export async function segnaManualeNts(formData: FormData): Promise<void> {
+  await richiediAdmin();
+  const id = Number(formData.get("ordine"));
+  const nota = String(formData.get("nota") ?? "").trim().slice(0, 500);
+  if (!Number.isInteger(id)) return;
+  if (nota.length < 3) redirect(`/admin/ordini/${id}?nts=nota`);
+  const ok = await segnaInseritoAMano(id, nota);
+  refresh();
+  redirect(`/admin/ordini/${id}?nts=${ok ? "manuale" : "invariato"}`);
 }

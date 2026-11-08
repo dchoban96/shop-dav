@@ -16,6 +16,9 @@ export type Cliente = {
 
 export type StatoOrdine = "bozza" | "inviato" | "confermato" | "inserito_nts" | "consegnato" | "annullato";
 
+/** Avanzamento verso NTS (connettore in LAN). null = ordine fuori dal flusso (demo, carrello, precedente). */
+export type StatoNts = "da_inviare" | "in_invio" | "in_frontiera" | "in_nts" | "da_verificare" | "errore" | "manuale";
+
 export type Ordine = {
   id: number;
   numero: number;
@@ -25,6 +28,15 @@ export type Ordine = {
   totale_netto: number;
   creato_il: string;
   email_inviata_il: string | null;
+  stato_nts: StatoNts | null;
+  riferimento_nts: string | null;
+  numero_nts: number | null;
+  id_frontiera: number | null;
+  errore_nts: string | null;
+  tentativi_nts: number;
+  in_invio_il: string | null;
+  in_frontiera_il: string | null;
+  in_nts_il: string | null;
 };
 
 export type RigaOrdine = {
@@ -61,11 +73,22 @@ export type VoceStorico = {
   fatturato_12m: number;
 };
 
+/** Etichette per l'ufficio. */
 export const ETICHETTA_STATO: Record<StatoOrdine, string> = {
   bozza: "Bozza",
   inviato: "Inviato all’ufficio",
   confermato: "Confermato",
   inserito_nts: "Inserito in gestionale",
+  consegnato: "Consegnato",
+  annullato: "Annullato",
+};
+
+/** Etichette per il cliente: stato semplificato, senza gestionale né numeri NTS. */
+export const ETICHETTA_CLIENTE: Record<StatoOrdine, string> = {
+  bozza: "Bozza",
+  inviato: "Ordine ricevuto",
+  confermato: "Ordine preso in carico",
+  inserito_nts: "Ordine preso in carico",
   consegnato: "Consegnato",
   annullato: "Annullato",
 };
@@ -101,6 +124,24 @@ function normalizzaOrdine(o: Record<string, unknown>): Ordine {
     id: Number(o.id), numero: Number(o.numero), stato: o.stato as StatoOrdine,
     data_consegna_richiesta: (o.data_consegna_richiesta as string | null) ?? null, note: (o.note as string | null) ?? null,
     totale_netto: Number(o.totale_netto ?? 0), creato_il: String(o.creato_il), email_inviata_il: (o.email_inviata_il as string | null) ?? null,
+    ...campiNts(o),
+  };
+}
+
+/** Colonne NTS dell'ordine (migrazione 0007); assenti prima della migrazione → valori vuoti. */
+export function campiNts(o: Record<string, unknown>) {
+  const testo = (v: unknown) => (v === null || v === undefined ? null : String(v));
+  const numero = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+  return {
+    stato_nts: (o.stato_nts as StatoNts | null | undefined) ?? null,
+    riferimento_nts: testo(o.riferimento_nts),
+    numero_nts: numero(o.numero_nts),
+    id_frontiera: numero(o.id_frontiera),
+    errore_nts: testo(o.errore_nts),
+    tentativi_nts: Number(o.tentativi_nts ?? 0),
+    in_invio_il: testo(o.in_invio_il),
+    in_frontiera_il: testo(o.in_frontiera_il),
+    in_nts_il: testo(o.in_nts_il),
   };
 }
 

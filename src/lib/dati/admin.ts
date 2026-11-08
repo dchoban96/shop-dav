@@ -4,7 +4,8 @@
  * nella route di esportazione.
  */
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { righeOrdine, type Ordine, type RigaOrdine, type StatoOrdine } from "@/lib/dati/ordini";
+import { DA_CONTROLLARE, STATI_NTS } from "@/lib/dati/nts";
+import { campiNts, righeOrdine, type Ordine, type RigaOrdine, type StatoOrdine } from "@/lib/dati/ordini";
 
 export const STATI_ADMIN: StatoOrdine[] = ["inviato", "confermato", "inserito_nts", "consegnato", "annullato"];
 
@@ -28,6 +29,7 @@ function normalizza(o: OrdineDb): OrdineAdmin {
     totale_netto: Number(o.totale_netto ?? 0),
     creato_il: String(o.creato_il),
     email_inviata_il: (o.email_inviata_il as string | null) ?? null,
+    ...campiNts(o),
     cliente: uno(o.cliente),
     n_righe: o.righe_ordine?.[0]?.count ?? 0,
   };
@@ -72,19 +74,26 @@ export async function leggiCruscotto(): Promise<Cruscotto> {
 
 // Ordini ------------------------------------------------------------------------
 
-export type FiltroOrdini = { stato?: string; q?: string; dal?: string; al?: string; pagina?: number };
+export type FiltroOrdini = { stato?: string; nts?: string; q?: string; dal?: string; al?: string; pagina?: number };
+
+/** Valori del filtro "Stato NTS": uno stato oppure `da_controllare` (errore + da verificare). */
+export const FILTRI_NTS = ["da_controllare", ...STATI_NTS] as const;
 
 export async function elencoOrdini(f: FiltroOrdini): Promise<{ ordini: OrdineAdmin[]; totale: number; pagina: number; pagine: number }> {
   const perPagina = 30;
   const pagina = Math.max(1, f.pagina ?? 1);
   let q = supabaseAdmin().from("ordini").select(CAMPI_ORDINE, { count: "exact" }).neq("stato", "bozza");
   if (f.stato && (STATI_ADMIN as string[]).includes(f.stato)) q = q.eq("stato", f.stato);
+  if (f.nts === "da_controllare") q = q.in("stato_nts", DA_CONTROLLARE);
+  else if (f.nts && (STATI_NTS as string[]).includes(f.nts)) q = q.eq("stato_nts", f.nts);
   if (f.dal && /^\d{4}-\d{2}-\d{2}$/.test(f.dal)) q = q.gte("creato_il", `${f.dal}T00:00:00`);
   if (f.al && /^\d{4}-\d{2}-\d{2}$/.test(f.al)) q = q.lte("creato_il", `${f.al}T23:59:59`);
   const testo = (f.q ?? "").trim().replace(/[,().%\\]/g, " ").trim();
   if (testo) {
-    // Numeri fino a 6 cifre: numero d'ordine. Altrimenti codice o ragione sociale del cliente.
-    if (/^\d{1,6}$/.test(testo)) q = q.eq("numero", Number(testo));
+    // SHOP-000123 o numeri fino a 6 cifre: numero d'ordine. Altrimenti codice o ragione sociale del cliente.
+    const rif = /^SHOP-?(\d{1,9})$/i.exec(testo);
+    if (rif) q = q.eq("numero", Number(rif[1]));
+    else if (/^\d{1,6}$/.test(testo)) q = q.eq("numero", Number(testo));
     else q = q.or(`codice_nts.ilike.%${testo}%,ragione_sociale.ilike.%${testo}%`, { referencedTable: "clienti" });
   }
   const da = (pagina - 1) * perPagina;
