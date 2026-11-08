@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
 import { esci } from "@/app/(pubblico)/accedi/azioni";
+import { Contenitore } from "@/components/Contenitore";
 
 const voci = [
   { href: "/home", label: "Home" },
@@ -15,7 +16,7 @@ export function HeaderCliente({ codiceCliente, ragioneSociale, demo, nelCarrello
   return (
     <>
       <header className="sticky top-0 z-20 border-b border-ice bg-bianco/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
+        <Contenitore className="flex h-16 items-center justify-between gap-4">
           <Link href="/home" aria-label="Home area clienti" className="shrink-0">
             <Logo compatto />
           </Link>
@@ -34,7 +35,7 @@ export function HeaderCliente({ codiceCliente, ragioneSociale, demo, nelCarrello
               </button>
             </form>
           </div>
-        </div>
+        </Contenitore>
         {demo && (
           <p className="bg-ice px-4 py-1.5 text-center text-xs text-slate">
             Accesso demo: gli ordini vengono registrati ma non inviati via email.

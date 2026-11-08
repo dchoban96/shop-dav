@@ -1,8 +1,13 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { connection } from "next/server";
 import { Emblema } from "@/components/Logo";
 import { BottoneLink } from "@/components/Bottone";
+import { ScaffaleMarchi } from "@/components/ScaffaleMarchi";
 import { Sezione } from "@/components/Sezione";
+import { leggiPartner } from "@/lib/dati/catalogo";
 import { azienda } from "@/lib/azienda";
+import { Contenitore } from "@/components/Contenitore";
 
 const categorie = [
   { nome: "Secco", testo: "Farine, zuccheri, semilavorati, decorazioni e packaging." },
@@ -28,12 +33,21 @@ const passi = [
   },
 ];
 
+/** Scaffale dei marchi autorizzati (`pubblicato = true`); nascosto finché non ce ne sono. */
+async function Marchi() {
+  await connection();
+  const partner = await leggiPartner();
+  if (partner.length === 0) return null;
+  const marchi = partner.map((p) => ({ id: p.id, nome: p.nome_breve ?? p.nome_nts, logo: p.logo_path, href: "/partner" }));
+  return <ScaffaleMarchi marchi={marchi} mono className="mt-8" />;
+}
+
 export default function Home() {
   return (
     <>
       {/* Hero */}
       <section className="bg-bianco">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 md:grid-cols-[1fr_auto] md:py-24">
+        <Contenitore className="grid items-center gap-10 py-16 md:grid-cols-[1fr_auto] md:py-24">
           <div>
             <p className="etichetta">{azienda.nomeEsteso}</p>
             <h1 className="mt-3 max-w-2xl text-4xl leading-tight md:text-5xl">
@@ -51,7 +65,7 @@ export default function Home() {
             </div>
           </div>
           <Emblema size={240} className="hidden md:block" />
-        </div>
+        </Contenitore>
       </section>
 
       {/* Categorie */}
@@ -72,7 +86,10 @@ export default function Home() {
           Lavoriamo con i principali marchi della pasticceria e della panificazione professionale.
           I loghi compaiono qui man mano che riceviamo l’autorizzazione dei fornitori.
         </p>
-        <p className="mt-4">
+        <Suspense fallback={null}>
+          <Marchi />
+        </Suspense>
+        <p className="mt-6">
           <Link href="/partner" className="font-semibold underline underline-offset-4">
             Vedi i partner
           </Link>

@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { Logo } from "@/components/Logo";
 import { leggiSessioneAdmin } from "@/lib/sessione";
 import { esciAdmin } from "../../(admin-accesso)/admin/accedi/azioni";
+import { Contenitore } from "@/components/Contenitore";
 
 export const metadata: Metadata = { title: { default: "Ufficio", template: "%s · Ufficio DAV" }, robots: { index: false, follow: false } };
 
@@ -30,7 +31,7 @@ async function Protetto({ children }: { children: ReactNode }) {
   return (
     <>
       <header className="sticky top-0 z-20 border-b border-ice bg-bianco/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4">
+        <Contenitore className="flex h-16 items-center justify-between gap-4">
           <Link href="/admin" className="flex shrink-0 items-center gap-3" aria-label="Cruscotto ufficio">
             <Logo compatto />
             <span className="etichetta hidden md:inline">Ufficio</span>
@@ -47,7 +48,7 @@ async function Protetto({ children }: { children: ReactNode }) {
               Esci
             </button>
           </form>
-        </div>
+        </Contenitore>
       </header>
       <main className="flex-1">{children}</main>
     </>

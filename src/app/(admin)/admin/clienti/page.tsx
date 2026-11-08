@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { elencoClienti } from "@/lib/dati/admin";
+import { Contenitore } from "@/components/Contenitore";
 
 export const metadata = { title: "Clienti" };
 
@@ -102,7 +103,7 @@ async function Elenco({ searchParams }: Props) {
 
 export default function ClientiAdmin({ searchParams }: Props) {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
+    <Contenitore className="py-8">
       <p className="etichetta">Ufficio DAV</p>
       <h1 className="mt-1 text-3xl">Clienti</h1>
       <div className="mt-6">
@@ -110,6 +111,6 @@ export default function ClientiAdmin({ searchParams }: Props) {
           <Elenco searchParams={searchParams} />
         </Suspense>
       </div>
-    </div>
+    </Contenitore>
   );
 }

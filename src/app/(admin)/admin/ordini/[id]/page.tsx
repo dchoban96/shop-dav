@@ -6,6 +6,7 @@ import { formattaPrezzo } from "@/lib/dati/catalogo";
 import { ordineAdmin } from "@/lib/dati/admin";
 import { ETICHETTA_STATO, formattaData, type StatoOrdine } from "@/lib/dati/ordini";
 import { aggiornaStato } from "../../azioni";
+import { Contenitore } from "@/components/Contenitore";
 
 export const metadata = { title: "Ordine" };
 
@@ -132,7 +133,7 @@ async function Dettaglio({ params }: Props) {
 
 export default function OrdineAdminPagina({ params }: Props) {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <Contenitore className="py-8">
       <p className="mb-4 text-sm">
         <Link href="/admin/ordini" className="underline underline-offset-2">
           ← Ordini
@@ -141,6 +142,6 @@ export default function OrdineAdminPagina({ params }: Props) {
       <Suspense fallback={<p className="text-sm text-slate">Carico l’ordine…</p>}>
         <Dettaglio params={params} />
       </Suspense>
-    </div>
+    </Contenitore>
   );
 }

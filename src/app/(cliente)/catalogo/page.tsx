@@ -11,6 +11,7 @@ import {
   sogliaEsaurimento,
   type Ordinamento,
 } from "@/lib/dati/catalogo";
+import { Contenitore } from "@/components/Contenitore";
 
 export const metadata: Metadata = { title: "Catalogo" };
 
@@ -71,7 +72,7 @@ async function Risultati({ searchParams }: Props) {
 
 export default function Catalogo({ searchParams }: Props) {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <Contenitore className="py-8">
       <p className="etichetta">Catalogo</p>
       <h1 className="mt-1 text-3xl">Tutti i prodotti DAV</h1>
       <div className="mt-6">
@@ -79,6 +80,6 @@ export default function Catalogo({ searchParams }: Props) {
           <Risultati searchParams={searchParams} />
         </Suspense>
       </div>
-    </div>
+    </Contenitore>
   );
 }

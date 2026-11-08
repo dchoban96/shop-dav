@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Contenitore } from "@/components/Contenitore";
 
 type Props = {
   etichetta?: string;
@@ -12,11 +13,11 @@ type Props = {
 export function Sezione({ etichetta, titolo, children, sfondo = "bianco", id }: Props) {
   return (
     <section id={id} className={sfondo === "ice" ? "bg-ice" : "bg-bianco"}>
-      <div className="mx-auto max-w-6xl px-4 py-14 md:py-20">
+      <Contenitore className="py-14 md:py-20">
         {etichetta && <p className="etichetta">{etichetta}</p>}
         <h2 className="mt-2 text-3xl md:text-4xl">{titolo}</h2>
         <div className="mt-8">{children}</div>
-      </div>
+      </Contenitore>
     </section>
   );
 }

@@ -17,6 +17,8 @@ import {
 } from "@/lib/dati/ordini";
 import { leggiSessione } from "@/lib/sessione";
 import { cambiaQuantita, conferma, rimuovi, salvaNotaRiga } from "../azioni";
+import { Contenitore } from "@/components/Contenitore";
+import { LogoFornitore } from "@/components/LogoFornitore";
 
 export const metadata: Metadata = { title: "Carrello" };
 
@@ -34,13 +36,13 @@ function RigaCarrello({ riga }: { riga: RigaOrdine }) {
   const prezzo = formattaPrezzo(riga.prezzo_finale);
   const subtotale = riga.prezzo_finale === null ? null : formattaPrezzo(riga.prezzo_finale * riga.quantita);
   return (
-    <li className="flex gap-4 rounded-lg border border-azzurro/40 p-3 sm:p-4">
-      <Link href={`/catalogo/${encodeURIComponent(riga.cod_dav)}`} className="shrink-0">
+    <li className="flex gap-3 rounded-lg border border-azzurro/40 p-3 sm:gap-4 sm:p-4">
+      <LogoFornitore nome={riga.marchio ?? "Marchio"} logo={riga.logo_marchio} formato="riga" />
+      <Link href={`/catalogo/${encodeURIComponent(riga.cod_dav)}`} className="hidden shrink-0 sm:block">
         <FotoArticolo articolo={articoloFinto} formato="piccola" />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div>
-          {riga.marchio && <p className="etichetta">{riga.marchio}</p>}
           <p className="font-semibold leading-snug">{riga.descrizione}</p>
           <p className="text-xs text-slate">
             {riga.cod_dav}
@@ -199,12 +201,12 @@ async function Contenuto({ searchParams }: Props) {
 
 export default function Carrello({ searchParams }: Props) {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <Contenitore className="py-8">
       <p className="etichetta">Carrello</p>
       <h1 className="mt-1 text-3xl">Il tuo ordine</h1>
       <Suspense fallback={<p className="mt-6 text-sm text-slate">Carico il carrello…</p>}>
         <Contenuto searchParams={searchParams} />
       </Suspense>
-    </div>
+    </Contenitore>
   );
 }

@@ -41,6 +41,7 @@ export type RigaOrdine = {
   note: string | null;
   famiglia: string | null;
   marchio: string | null;
+  logo_marchio: string | null;
   foto_path: string | null;
 };
 
@@ -50,6 +51,7 @@ export type VoceStorico = {
   um: string | null;
   famiglia: string | null;
   marchio: string | null;
+  logo_marchio: string | null;
   foto_path: string | null;
   ultima_data: string | null;
   ultima_quantita: number | null;
@@ -67,14 +69,16 @@ export const ETICHETTA_STATO: Record<StatoOrdine, string> = {
   annullato: "Annullato",
 };
 
+type Forn = { nome_breve: string | null; nome_nts: string; logo_path: string | null };
+
 const CAMPI_RIGA =
   "id, cod_dav, descrizione, quantita, um, prezzo_listino, sconto1, sconto2, prezzo_accordato, prezzo_finale, note, " +
-  "articolo:articoli(foto_path, famiglia:famiglie(nome), fornitore:fornitori(nome_breve, nome_nts))";
+  "articolo:articoli(foto_path, famiglia:famiglie(nome), fornitore:fornitori(nome_breve, nome_nts, logo_path))";
 
 type RigaDb = {
   id: number; cod_dav: string; descrizione: string; quantita: string | number; um: string | null;
   prezzo_listino: string | null; sconto1: string; sconto2: string; prezzo_accordato: string | null; prezzo_finale: string | null; note: string | null;
-  articolo: { foto_path: string | null; famiglia: { nome: string } | { nome: string }[] | null; fornitore: { nome_breve: string | null; nome_nts: string } | { nome_breve: string | null; nome_nts: string }[] | null } | null;
+  articolo: { foto_path: string | null; famiglia: { nome: string } | { nome: string }[] | null; fornitore: Forn | Forn[] | null } | null;
 };
 
 const num = (v: string | number | null | undefined): number | null => (v === null || v === undefined ? null : Number(v));
@@ -87,7 +91,7 @@ function normalizzaRiga(r: RigaDb): RigaOrdine {
     id: r.id, cod_dav: r.cod_dav, descrizione: r.descrizione, quantita: Number(r.quantita), um: r.um,
     prezzo_listino: num(r.prezzo_listino), sconto1: Number(r.sconto1 ?? 0), sconto2: Number(r.sconto2 ?? 0),
     prezzo_accordato: num(r.prezzo_accordato), prezzo_finale: num(r.prezzo_finale), note: r.note,
-    famiglia: fam?.nome ?? null, marchio: forn?.nome_breve || forn?.nome_nts || null, foto_path: r.articolo?.foto_path ?? null,
+    famiglia: fam?.nome ?? null, marchio: forn?.nome_breve || forn?.nome_nts || null, logo_marchio: forn?.logo_path ?? null, foto_path: r.articolo?.foto_path ?? null,
   };
 }
 
@@ -114,7 +118,15 @@ export async function clientePerCodice(codice: string, creaDemo = true): Promise
     .insert({ codice_nts: codice, ragione_sociale: `Cliente ${codice} (accesso demo)`, demo: true })
     .select(campi)
     .single();
-  if (e2) throw new Error(`clientePerCodice: ${e2.message}`);
+  if (e2) {
+    // Layout e pagina chiamano in parallelo: se l'altra chiamata ha già creato il cliente, rileggilo.
+    if (e2.code === "23505") {
+      const { data: esistente, error: e3 } = await db.from("clienti").select(campi).eq("codice_nts", codice).maybeSingle();
+      if (e3) throw new Error(`clientePerCodice: ${e3.message}`);
+      if (esistente) return esistente as Cliente;
+    }
+    throw new Error(`clientePerCodice: ${e2.message}`);
+  }
   return nuovo as Cliente;
 }
 
@@ -237,13 +249,13 @@ export async function ordinePerId(clienteId: number, id: number): Promise<{ ordi
 export async function storicoCliente(clienteId: number, limite = 40): Promise<VoceStorico[]> {
   const { data, error } = await supabaseAdmin()
     .from("storico_acquisti")
-    .select("cod_dav, ultima_data, ultima_quantita, n_ordini_12m, qta_12m, fatturato_12m, articolo:articoli(descrizione_nts, descrizione_pulita, um, foto_path, attivo, famiglia:famiglie(nome), fornitore:fornitori(nome_breve, nome_nts))")
+    .select("cod_dav, ultima_data, ultima_quantita, n_ordini_12m, qta_12m, fatturato_12m, articolo:articoli(descrizione_nts, descrizione_pulita, um, foto_path, attivo, famiglia:famiglie(nome), fornitore:fornitori(nome_breve, nome_nts, logo_path))")
     .eq("cliente_id", clienteId)
     .order("n_ordini_12m", { ascending: false })
     .order("ultima_data", { ascending: false })
     .limit(limite);
   if (error) throw new Error(`storicoCliente: ${error.message}`);
-  type Riga = { cod_dav: string; ultima_data: string | null; ultima_quantita: string | null; n_ordini_12m: number; qta_12m: string; fatturato_12m: string; articolo: { descrizione_nts: string; descrizione_pulita: string | null; um: string | null; foto_path: string | null; attivo: boolean; famiglia: { nome: string } | { nome: string }[] | null; fornitore: { nome_breve: string | null; nome_nts: string } | { nome_breve: string | null; nome_nts: string }[] | null } | null };
+  type Riga = { cod_dav: string; ultima_data: string | null; ultima_quantita: string | null; n_ordini_12m: number; qta_12m: string; fatturato_12m: string; articolo: { descrizione_nts: string; descrizione_pulita: string | null; um: string | null; foto_path: string | null; attivo: boolean; famiglia: { nome: string } | { nome: string }[] | null; fornitore: Forn | Forn[] | null } | null };
   return ((data ?? []) as unknown as Riga[])
     .filter((r) => r.articolo?.attivo)
     .map((r) => {
@@ -251,7 +263,7 @@ export async function storicoCliente(clienteId: number, limite = 40): Promise<Vo
       const forn = uno(r.articolo?.fornitore);
       return {
         cod_dav: r.cod_dav, descrizione: r.articolo?.descrizione_pulita ?? r.articolo?.descrizione_nts ?? r.cod_dav, um: r.articolo?.um ?? null,
-        famiglia: fam?.nome ?? null, marchio: forn?.nome_breve || forn?.nome_nts || null, foto_path: r.articolo?.foto_path ?? null,
+        famiglia: fam?.nome ?? null, marchio: forn?.nome_breve || forn?.nome_nts || null, logo_marchio: forn?.logo_path ?? null, foto_path: r.articolo?.foto_path ?? null,
         ultima_data: r.ultima_data, ultima_quantita: num(r.ultima_quantita), n_ordini_12m: r.n_ordini_12m, qta_12m: Number(r.qta_12m), fatturato_12m: Number(r.fatturato_12m),
       };
     });

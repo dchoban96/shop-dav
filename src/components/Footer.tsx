@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
 import { azienda, navigazionePubblica } from "@/lib/azienda";
+import { Contenitore } from "@/components/Contenitore";
 
 const ANNO = new Date().getFullYear();
 
 export function Footer() {
   return (
     <footer className="mt-auto border-t border-ice bg-ice">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 md:grid-cols-3">
+      <Contenitore className="grid gap-8 py-10 md:grid-cols-3">
         <div>
           <Logo />
           <p className="mt-4 max-w-xs text-sm text-slate">{azienda.descrizioneBreve}</p>
@@ -52,11 +53,13 @@ export function Footer() {
             </li>
           </ul>
         </div>
-      </div>
+      </Contenitore>
       <div className="border-t border-azzurro/40">
-        <p className="mx-auto max-w-6xl px-4 py-4 text-xs text-slate">
-          © {ANNO} {azienda.ragioneSociale} · {azienda.nomeEsteso}
-        </p>
+        <Contenitore className="py-4">
+          <p className="text-xs text-slate">
+            © {ANNO} {azienda.ragioneSociale} · {azienda.nomeEsteso}
+          </p>
+        </Contenitore>
       </div>
     </footer>
   );

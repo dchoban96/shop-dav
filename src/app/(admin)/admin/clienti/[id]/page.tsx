@@ -5,6 +5,7 @@ import { BadgeStato } from "@/components/admin/StatoOrdine";
 import { formattaPrezzo } from "@/lib/dati/catalogo";
 import { schedaCliente } from "@/lib/dati/admin";
 import { formattaData, GIORNI_SETTIMANA, storicoCliente } from "@/lib/dati/ordini";
+import { Contenitore } from "@/components/Contenitore";
 
 export const metadata = { title: "Cliente" };
 
@@ -150,7 +151,7 @@ async function Scheda({ params }: Props) {
 
 export default function ClienteAdmin({ params }: Props) {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
+    <Contenitore className="py-8">
       <p className="mb-4 text-sm">
         <Link href="/admin/clienti" className="underline underline-offset-2">
           ← Clienti
@@ -159,6 +160,6 @@ export default function ClienteAdmin({ params }: Props) {
       <Suspense fallback={<p className="text-sm text-slate">Carico la scheda…</p>}>
         <Scheda params={params} />
       </Suspense>
-    </div>
+    </Contenitore>
   );
 }

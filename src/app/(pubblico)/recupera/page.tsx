@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Bottone } from "@/components/Bottone";
+import { Contenitore } from "@/components/Contenitore";
 
 export const metadata: Metadata = { title: "Recupera password" };
 
 export default function Recupera() {
   return (
-    <div className="mx-auto max-w-md px-4 py-16">
+    <Contenitore className="py-16">
+      <div className="mx-auto max-w-md">
       <p className="etichetta">Area clienti</p>
       <h1 className="mt-2 text-3xl">Recupera la password</h1>
       <p className="mt-3 text-sm text-slate">
@@ -36,6 +38,7 @@ export default function Recupera() {
           </Link>
         </p>
       </form>
-    </div>
+      </div>
+    </Contenitore>
   );
 }

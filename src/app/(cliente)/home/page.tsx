@@ -8,6 +8,9 @@ import { formattaPrezzo, leggiFamiglie, leggiMarchi } from "@/lib/dati/catalogo"
 import { clientePerCodice, formattaData, storicoCliente } from "@/lib/dati/ordini";
 import { leggiSessione } from "@/lib/sessione";
 import { aggiungiDaStorico } from "../azioni";
+import { Contenitore } from "@/components/Contenitore";
+import { LogoFornitore } from "@/components/LogoFornitore";
+import { ScaffaleMarchi } from "@/components/ScaffaleMarchi";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -41,9 +44,11 @@ async function SezioneTuoiArticoli() {
               };
               return (
                 <li key={v.cod_dav} className="flex items-center gap-3 py-3">
-                  <FotoArticolo articolo={articoloFinto} formato="piccola" />
+                  <LogoFornitore nome={v.marchio ?? "Marchio"} logo={v.logo_marchio} formato="riga" />
+                  <span className="hidden sm:block">
+                    <FotoArticolo articolo={articoloFinto} formato="piccola" />
+                  </span>
                   <div className="min-w-0 flex-1">
-                    {v.marchio && <p className="etichetta truncate">{v.marchio}</p>}
                     <Link href={`/catalogo/${encodeURIComponent(v.cod_dav)}`} className="block truncate font-semibold hover:underline">
                       {v.descrizione}
                     </Link>
@@ -106,6 +111,17 @@ const sezioniInArrivo = [
 async function SezioneCatalogo() {
   const [famiglie, marchi] = await Promise.all([leggiFamiglie(), leggiMarchi()]);
   const totale = famiglie.reduce((s, f) => s + f.n_articoli, 0);
+  // Scaffale: i marchi con logo come tile (al massimo 12), gli altri come chip di testo.
+  const conLogo = marchi.filter((m) => m.logo_path).slice(0, 12);
+  const tile = conLogo.map((m) => ({
+    id: m.id,
+    nome: m.nome_breve ?? m.nome_nts,
+    logo: m.logo_path,
+    dettaglio: `${m.n_articoli} ${m.n_articoli === 1 ? "articolo" : "articoli"}`,
+    href: `/catalogo?marchio=${m.id}`,
+  }));
+  const altri = marchi.filter((m) => !conLogo.includes(m)).slice(0, 16);
+  const restanti = marchi.length - tile.length - altri.length;
   return (
     <section className="rounded-lg border border-azzurro/40 p-6">
       <div className="flex items-baseline justify-between gap-4">
@@ -125,18 +141,19 @@ async function SezioneCatalogo() {
         ))}
       </ul>
       <p className="etichetta mt-6">Per marchio</p>
-      <ul className="mt-2 flex flex-wrap gap-2">
-        {marchi.slice(0, 24).map((m) => (
+      {tile.length > 0 && <ScaffaleMarchi marchi={tile} className="mt-2" />}
+      <ul className="mt-3 flex flex-wrap gap-2">
+        {altri.map((m) => (
           <li key={m.id}>
             <Link href={`/catalogo?marchio=${m.id}`} className="inline-block rounded-md border border-azzurro/40 px-3 py-1.5 text-sm text-navy hover:bg-ice">
               {m.nome_breve ?? m.nome_nts} <span className="text-slate">{m.n_articoli}</span>
             </Link>
           </li>
         ))}
-        {marchi.length > 24 && (
+        {restanti > 0 && (
           <li>
             <Link href="/catalogo" className="inline-block px-3 py-1.5 text-sm font-semibold underline underline-offset-4">
-              e altri {marchi.length - 24} marchi
+              e altri {restanti} marchi
             </Link>
           </li>
         )}
@@ -147,7 +164,7 @@ async function SezioneCatalogo() {
 
 export default function HomeCliente() {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <Contenitore className="py-8">
       <form method="get" action="/catalogo" role="search">
         <label htmlFor="ricerca" className="sr-only">
           Cerca un articolo
@@ -180,6 +197,6 @@ export default function HomeCliente() {
           </div>
         </aside>
       </div>
-    </div>
+    </Contenitore>
   );
 }

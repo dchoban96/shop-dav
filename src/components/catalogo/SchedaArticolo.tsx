@@ -7,6 +7,7 @@ import {
   formattaPrezzo,
   nomeMarchio,
 } from "@/lib/dati/catalogo";
+import { LogoFornitore } from "@/components/LogoFornitore";
 
 /** Segnaposto foto: fondo ice con il nome della famiglia, mai la foto di un altro prodotto. */
 type Formato = "card" | "grande" | "piccola";
@@ -68,7 +69,9 @@ export function SchedaArticolo({ articolo, stato }: Props) {
         <FotoArticolo articolo={articolo} />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="etichetta truncate">{nomeMarchio(articolo)}</p>
+        <div className="flex h-5 items-center">
+          <LogoFornitore nome={nomeMarchio(articolo)} logo={articolo.fornitore?.logo_path} formato="inline" />
+        </div>
         <h3 className="font-sans text-sm font-semibold leading-snug text-navy">
           <Link href={`/catalogo/${encodeURIComponent(articolo.cod_dav)}`} className="hover:underline">
             {nome}

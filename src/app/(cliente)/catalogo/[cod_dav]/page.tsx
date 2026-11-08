@@ -6,6 +6,8 @@ import { BadgeDisponibilita, FotoArticolo, Prezzo } from "@/components/catalogo/
 import { Bottone } from "@/components/Bottone";
 import { disponibilita, leggiArticolo, nomeMarchio, sogliaEsaurimento } from "@/lib/dati/catalogo";
 import { aggiungi } from "../../azioni";
+import { Contenitore } from "@/components/Contenitore";
+import { LogoFornitore } from "@/components/LogoFornitore";
 
 export const metadata: Metadata = { title: "Articolo" };
 
@@ -23,11 +25,12 @@ async function Dettaglio({ params }: Props) {
       <FotoArticolo articolo={articolo} grande />
       <div className="flex flex-col gap-4">
         <div>
-          {articolo.fornitore?.logo_path && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={articolo.fornitore.logo_path} alt={nomeMarchio(articolo)} className="mb-2 h-8 w-auto max-w-[160px] object-contain object-left" />
+          {articolo.fornitore && (
+            <div className="mb-3 flex items-center gap-3">
+              <LogoFornitore nome={nomeMarchio(articolo)} logo={articolo.fornitore.logo_path} formato="riga" />
+              <p className="etichetta">{nomeMarchio(articolo)}</p>
+            </div>
           )}
-          <p className="etichetta">{nomeMarchio(articolo)}</p>
           <h1 className="mt-1 text-3xl leading-tight">{nome}</h1>
           <p className="mt-2 text-sm text-slate">
             Codice {articolo.cod_dav}
@@ -100,7 +103,7 @@ async function Dettaglio({ params }: Props) {
 
 export default function PaginaArticolo({ params }: Props) {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <Contenitore className="py-8">
       <p className="mb-6 text-sm">
         <Link href="/catalogo" className="underline underline-offset-2">
           ← Catalogo
@@ -109,6 +112,6 @@ export default function PaginaArticolo({ params }: Props) {
       <Suspense fallback={<p className="text-sm text-slate">Carico l’articolo…</p>}>
         <Dettaglio params={params} />
       </Suspense>
-    </div>
+    </Contenitore>
   );
 }

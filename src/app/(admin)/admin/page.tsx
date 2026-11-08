@@ -4,6 +4,7 @@ import { BadgeStato } from "@/components/admin/StatoOrdine";
 import { formattaPrezzo } from "@/lib/dati/catalogo";
 import { elencoOrdini, leggiCruscotto } from "@/lib/dati/admin";
 import { formattaData } from "@/lib/dati/ordini";
+import { Contenitore } from "@/components/Contenitore";
 
 export const metadata = { title: "Cruscotto" };
 
@@ -94,7 +95,7 @@ async function Contenuto() {
 
 export default function Cruscotto() {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
+    <Contenitore className="py-8">
       <p className="etichetta">Ufficio DAV</p>
       <h1 className="mt-1 text-3xl">Cruscotto</h1>
       <div className="mt-6">
@@ -102,6 +103,6 @@ export default function Cruscotto() {
           <Contenuto />
         </Suspense>
       </div>
-    </div>
+    </Contenitore>
   );
 }

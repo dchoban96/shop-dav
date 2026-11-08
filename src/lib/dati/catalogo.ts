@@ -141,6 +141,20 @@ export async function leggiMarchi(): Promise<Marchio[]> {
   return ((data ?? []) as Marchio[]).map((m) => ({ ...m, fatturato_12m: Number(m.fatturato_12m) }));
 }
 
+export type Partner = { id: number; nome_breve: string | null; nome_nts: string; logo_path: string | null; presentazione: string | null };
+
+/** Fornitori da mostrare in pubblico (/partner, landing): solo con autorizzazione scritta, `pubblicato = true`. */
+export async function leggiPartner(): Promise<Partner[]> {
+  const { data, error } = await supabaseAdmin()
+    .from("fornitori")
+    .select("id, nome_breve, nome_nts, logo_path, presentazione")
+    .eq("attivo", true)
+    .eq("pubblicato", true)
+    .order("nome_breve");
+  if (error) throw new Error(`leggiPartner: ${error.message}`);
+  return (data ?? []) as Partner[];
+}
+
 export async function sogliaEsaurimento(): Promise<number> {
   const { data } = await supabaseAdmin().from("impostazioni").select("valore").eq("chiave", "soglia_esaurimento").maybeSingle();
   const n = Number(data?.valore);

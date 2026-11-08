@@ -6,6 +6,7 @@ import { BottoneLink } from "@/components/Bottone";
 import { formattaPrezzo } from "@/lib/dati/catalogo";
 import { clientePerCodice, ETICHETTA_STATO, formattaData, ordiniCliente } from "@/lib/dati/ordini";
 import { leggiSessione } from "@/lib/sessione";
+import { Contenitore } from "@/components/Contenitore";
 
 export const metadata: Metadata = { title: "Ordini" };
 
@@ -52,12 +53,12 @@ async function Elenco() {
 
 export default function Ordini() {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <Contenitore className="py-8">
       <p className="etichetta">Ordini</p>
       <h1 className="mt-1 text-3xl">I tuoi ordini</h1>
       <Suspense fallback={<p className="mt-6 text-sm text-slate">Carico gli ordini…</p>}>
         <Elenco />
       </Suspense>
-    </div>
+    </Contenitore>
   );
 }

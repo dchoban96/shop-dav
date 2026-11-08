@@ -7,6 +7,8 @@ import { formattaPrezzo } from "@/lib/dati/catalogo";
 import { clientePerCodice, ETICHETTA_STATO, formattaData, ordinePerId } from "@/lib/dati/ordini";
 import { leggiSessione } from "@/lib/sessione";
 import { riordina } from "../../azioni";
+import { Contenitore } from "@/components/Contenitore";
+import { LogoFornitore } from "@/components/LogoFornitore";
 
 export const metadata: Metadata = { title: "Ordine" };
 
@@ -63,14 +65,19 @@ async function Dettaglio({ params, searchParams }: Props) {
           {righe.map((r) => (
             <tr key={r.id} className="border-b border-ice align-top">
               <td className="py-2 pr-2">
-                <Link href={`/catalogo/${encodeURIComponent(r.cod_dav)}`} className="font-semibold hover:underline">
-                  {r.descrizione}
-                </Link>
-                <p className="text-xs text-slate">
-                  {r.cod_dav}
-                  {r.um ? ` · ${r.um}` : ""}
-                  {r.note ? ` · ${r.note}` : ""}
-                </p>
+                <div className="flex items-start gap-3">
+                  <LogoFornitore nome={r.marchio ?? "Marchio"} logo={r.logo_marchio} formato="compatto" />
+                  <div className="min-w-0">
+                    <Link href={`/catalogo/${encodeURIComponent(r.cod_dav)}`} className="font-semibold hover:underline">
+                      {r.descrizione}
+                    </Link>
+                    <p className="text-xs text-slate">
+                      {r.cod_dav}
+                      {r.um ? ` · ${r.um}` : ""}
+                      {r.note ? ` · ${r.note}` : ""}
+                    </p>
+                  </div>
+                </div>
               </td>
               <td className="py-2 text-right">{r.quantita}</td>
               <td className="hidden py-2 text-right sm:table-cell">{formattaPrezzo(r.prezzo_finale) ?? "da definire"}</td>
@@ -99,7 +106,7 @@ async function Dettaglio({ params, searchParams }: Props) {
 
 export default function PaginaOrdine(props: Props) {
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <Contenitore className="py-8">
       <p className="text-sm">
         <Link href="/ordini" className="underline underline-offset-2">
           ← I tuoi ordini
@@ -108,6 +115,6 @@ export default function PaginaOrdine(props: Props) {
       <Suspense fallback={<p className="mt-6 text-sm text-slate">Carico l’ordine…</p>}>
         <Dettaglio {...props} />
       </Suspense>
-    </div>
+    </Contenitore>
   );
 }

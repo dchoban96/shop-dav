@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Bottone } from "@/components/Bottone";
 import { leggiImpostazioni } from "@/lib/dati/admin";
 import { aggiornaImpostazioni } from "../azioni";
+import { Contenitore } from "@/components/Contenitore";
 
 export const metadata = { title: "Impostazioni" };
 
@@ -46,7 +47,7 @@ async function Modulo({ searchParams }: Props) {
 
 export default function Impostazioni({ searchParams }: Props) {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
+    <Contenitore className="py-8">
       <p className="etichetta">Ufficio DAV</p>
       <h1 className="mt-1 text-3xl">Impostazioni</h1>
       <div className="mt-6">
@@ -54,6 +55,6 @@ export default function Impostazioni({ searchParams }: Props) {
           <Modulo searchParams={searchParams} />
         </Suspense>
       </div>
-    </div>
+    </Contenitore>
   );
 }

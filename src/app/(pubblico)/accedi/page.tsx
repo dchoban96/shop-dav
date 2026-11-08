@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Bottone } from "@/components/Bottone";
 import { azienda } from "@/lib/azienda";
 import { accedi } from "./azioni";
+import { Contenitore } from "@/components/Contenitore";
 
 export const metadata: Metadata = { title: "Area clienti" };
 
@@ -25,7 +26,8 @@ async function MessaggioErrore({ searchParams }: Props) {
  */
 export default function Accedi({ searchParams }: Props) {
   return (
-    <div className="mx-auto max-w-md px-4 py-16">
+    <Contenitore className="py-16">
+      <div className="mx-auto max-w-md">
       <p className="etichetta">Area clienti</p>
       <h1 className="mt-2 text-3xl">Accedi</h1>
       <p className="mt-3 text-sm text-slate">
@@ -82,6 +84,7 @@ export default function Accedi({ searchParams }: Props) {
         </a>{" "}
         o chiedi al tuo referente.
       </div>
-    </div>
+      </div>
+    </Contenitore>
   );
 }
