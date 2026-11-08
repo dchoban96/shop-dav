@@ -19,13 +19,14 @@ import { leggiSessione } from "@/lib/sessione";
 import { cambiaQuantita, conferma, rimuovi, salvaNotaRiga } from "../azioni";
 import { Contenitore } from "@/components/Contenitore";
 import { LogoFornitore } from "@/components/LogoFornitore";
+import { IconaMeno, IconaPiu } from "@/components/Icone";
 
 export const metadata: Metadata = { title: "Carrello" };
 
 type Props = { searchParams: Promise<{ errore?: string }> };
 
 const campo = "rounded-md border border-azzurro bg-bianco px-3 py-2 text-sm";
-const bottoneQta = "flex h-10 w-10 items-center justify-center rounded-md border border-navy text-lg font-semibold text-navy hover:bg-ice";
+const bottoneQta = "flex h-10 w-10 items-center justify-center rounded-md text-bianco transition-colors";
 
 function RigaCarrello({ riga }: { riga: RigaOrdine }) {
   const articoloFinto = {
@@ -55,8 +56,8 @@ function RigaCarrello({ riga }: { riga: RigaOrdine }) {
           <form action={cambiaQuantita} className="flex items-center gap-2">
             <input type="hidden" name="riga" value={riga.id} />
             <input type="hidden" name="attuale" value={riga.quantita} />
-            <button type="submit" name="azione" value="meno" className={bottoneQta} aria-label="Una confezione in meno">
-              −
+            <button type="submit" name="azione" value="meno" className={`${bottoneQta} bg-rosso hover:bg-[#9a362e]`} aria-label="Una confezione in meno">
+              <IconaMeno />
             </button>
             <label htmlFor={`qta-${riga.id}`} className="sr-only">
               Quantità
@@ -71,8 +72,8 @@ function RigaCarrello({ riga }: { riga: RigaOrdine }) {
               inputMode="numeric"
               className="h-10 w-16 rounded-md border border-azzurro bg-bianco text-center text-base"
             />
-            <button type="submit" name="azione" value="piu" className={bottoneQta} aria-label="Una confezione in più">
-              +
+            <button type="submit" name="azione" value="piu" className={`${bottoneQta} bg-verde hover:bg-[#25714a]`} aria-label="Una confezione in più">
+              <IconaPiu />
             </button>
             <button type="submit" name="azione" value="imposta" className="text-sm font-semibold underline underline-offset-2">
               Aggiorna

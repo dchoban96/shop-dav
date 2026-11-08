@@ -8,6 +8,11 @@
   --color-ice: #eef3f7;
   --color-slate: #51627a;
 
+  /* Colori funzionali (solo per azioni: togli, aggiungi, metti nel carrello), tenuti sobri */
+  --color-rosso: #b5443a;
+  --color-verde: #2f8a5b;
+  --color-viola: #6a4fbf;
+
   --font-serif: var(--font-baskerville), Georgia, "Times New Roman", serif;
   --font-sans: var(--font-franklin), system-ui, -apple-system, "Segoe UI", sans-serif;
 }

@@ -49,6 +49,7 @@ export type VoceStorico = {
   cod_dav: string;
   descrizione: string;
   um: string | null;
+  pezzi_confezione: number | null;
   famiglia: string | null;
   marchio: string | null;
   logo_marchio: string | null;
@@ -268,20 +269,20 @@ export async function ordinePerId(clienteId: number, id: number): Promise<{ ordi
 export async function storicoCliente(clienteId: number, limite = 40): Promise<VoceStorico[]> {
   const { data, error } = await supabaseAdmin()
     .from("storico_acquisti")
-    .select("cod_dav, ultima_data, ultima_quantita, n_ordini_12m, qta_12m, fatturato_12m, articolo:articoli(descrizione_nts, descrizione_pulita, um, foto_path, attivo, famiglia:famiglie(nome), fornitore:fornitori(nome_breve, nome_nts, logo_path))")
+    .select("cod_dav, ultima_data, ultima_quantita, n_ordini_12m, qta_12m, fatturato_12m, articolo:articoli(descrizione_nts, descrizione_pulita, um, pezzi_confezione, foto_path, attivo, famiglia:famiglie(nome), fornitore:fornitori(nome_breve, nome_nts, logo_path))")
     .eq("cliente_id", clienteId)
     .order("n_ordini_12m", { ascending: false })
     .order("ultima_data", { ascending: false })
     .limit(limite);
   if (error) throw new Error(`storicoCliente: ${error.message}`);
-  type Riga = { cod_dav: string; ultima_data: string | null; ultima_quantita: string | null; n_ordini_12m: number; qta_12m: string; fatturato_12m: string; articolo: { descrizione_nts: string; descrizione_pulita: string | null; um: string | null; foto_path: string | null; attivo: boolean; famiglia: { nome: string } | { nome: string }[] | null; fornitore: Forn | Forn[] | null } | null };
+  type Riga = { cod_dav: string; ultima_data: string | null; ultima_quantita: string | null; n_ordini_12m: number; qta_12m: string; fatturato_12m: string; articolo: { descrizione_nts: string; descrizione_pulita: string | null; um: string | null; pezzi_confezione: string | null; foto_path: string | null; attivo: boolean; famiglia: { nome: string } | { nome: string }[] | null; fornitore: Forn | Forn[] | null } | null };
   return ((data ?? []) as unknown as Riga[])
     .filter((r) => r.articolo?.attivo)
     .map((r) => {
       const fam = uno(r.articolo?.famiglia);
       const forn = uno(r.articolo?.fornitore);
       return {
-        cod_dav: r.cod_dav, descrizione: r.articolo?.descrizione_pulita ?? r.articolo?.descrizione_nts ?? r.cod_dav, um: r.articolo?.um ?? null,
+        cod_dav: r.cod_dav, descrizione: r.articolo?.descrizione_pulita ?? r.articolo?.descrizione_nts ?? r.cod_dav, um: r.articolo?.um ?? null, pezzi_confezione: num(r.articolo?.pezzi_confezione),
         famiglia: fam?.nome ?? null, marchio: forn?.nome_breve || forn?.nome_nts || null, logo_marchio: forn?.logo_path ?? null, foto_path: r.articolo?.foto_path ?? null,
         ultima_data: r.ultima_data, ultima_quantita: num(r.ultima_quantita), n_ordini_12m: r.n_ordini_12m, qta_12m: Number(r.qta_12m), fatturato_12m: Number(r.fatturato_12m),
       };

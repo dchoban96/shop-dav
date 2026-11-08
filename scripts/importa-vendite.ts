@@ -1,7 +1,9 @@
 /**
  * Import dello storico vendite dal data.json del cruscotto agenti (STRUTTURA, sezione 6).
  *
- *   npm run vendite -- --file ../FotoFornitori/Shop/dati/vendite/data.json [--dry-run]
+ *   npm run vendite -- --file ../FotoFornitori/Shop/dati/vendite/data.json [--dry-run] [--solo-articoli]
+ *
+ * --solo-articoli aggiorna soltanto listino e unità di misura degli articoli (passo 4).
  *
  * Il file è l'aggregato mensile per cliente × articolo costruito da build_data.py sugli
  * export NTS (2022-09 → ultimo mese). Da qui si ricavano:
@@ -10,6 +12,7 @@
  *   - acquisti_mensili  quantità, valore e righe per mese
  *   - articoli.prezzo_listino   prezzo di listino unitario = valore listino / quantità
  *                               dell'ultimo mese in cui l'articolo è stato venduto
+ *   - articoli.um       unità di misura più usata nelle vendite (cubo `u`: 0 = PZ, 1 = KG, 2 = LT)
  *   - condizioni_cliente (tipo articolo, prezzo_accordato) = ultimo prezzo netto unitario
  *                               fatturato a quel cliente per quell'articolo
  *
@@ -36,15 +39,18 @@ type Dati = {
 const LOTTO = 1000;
 const MESI_12 = 12;
 
-function parseArgs(): { file: string; dryRun: boolean } {
+function parseArgs(): { file: string; dryRun: boolean; soloArticoli: boolean } {
   const a = process.argv.slice(2);
   const i = a.indexOf("--file");
   if (i < 0 || !a[i + 1]) {
-    console.error("Uso: npm run vendite -- --file <data.json> [--dry-run]");
+    console.error("Uso: npm run vendite -- --file <data.json> [--dry-run] [--solo-articoli]");
     process.exit(2);
   }
-  return { file: resolve(a[i + 1]), dryRun: a.includes("--dry-run") };
+  return { file: resolve(a[i + 1]), dryRun: a.includes("--dry-run"), soloArticoli: a.includes("--solo-articoli") };
 }
+
+/** Codici unità del cubo (campo `u`), ricavati confrontando le descrizioni NTS (KG./PZ./LT.). */
+const UM_CUBO: Record<number, string> = { 0: "PZ", 1: "KG", 2: "LT" };
 
 /** 'YYYY-MM' → primo e ultimo giorno del mese, in ISO. */
 function primoGiorno(ym: string): string {
@@ -62,7 +68,7 @@ function clienteSpento(nome: string): boolean {
 }
 
 async function main() {
-  const { file, dryRun } = parseArgs();
+  const { file, dryRun, soloArticoli } = parseArgs();
   const dati = JSON.parse(readFileSync(file, "utf-8")) as Dati;
   const { yms, agents, clients, articles, cube } = dati;
   const nMesi = yms.length;
@@ -101,6 +107,7 @@ async function main() {
   type Agg = { ultimoM: number; qUlt: number; nUlt: number; vUlt: number; primoM: number; n12: number; q12: number; v12: number; nTot: number; qTot: number; vTot: number };
   const perCoppia = new Map<string, Agg>(); // "c|r"
   const listino = new Map<number, { m: number; prezzo: number }>(); // r → ultimo listino unitario
+  const umConteggi = new Map<number, Map<number, number>>(); // r → codice unità → righe vendute
   // Il cubo ha una riga per cliente × articolo × mese × unità di misura: qui si somma per mese.
   const mensiliPerChiave = new Map<string, { c: number; r: number; m: number; q: number; v: number; n: number }>();
 
@@ -108,6 +115,12 @@ async function main() {
     const r = cube.r[i];
     if (articoliFuori.has(r)) continue;
     const c = cube.c[i], m = cube.m[i], q = cube.q[i], v = cube.v[i], l = cube.l[i], n = cube.n[i];
+    const u = cube.u[i];
+    if (u in UM_CUBO) {
+      const cont = umConteggi.get(r) ?? new Map<number, number>();
+      cont.set(u, (cont.get(u) ?? 0) + n);
+      umConteggi.set(r, cont);
+    }
     const km = `${c}|${r}|${m}`;
     const mm = mensiliPerChiave.get(km);
     if (mm) { mm.q += q; mm.v += v; mm.n += n; } else mensiliPerChiave.set(km, { c, r, m, q, v, n });
@@ -128,14 +141,37 @@ async function main() {
     }
   }
   const mensili = [...mensiliPerChiave.values()];
-  console.log(`Coppie cliente×articolo: ${perCoppia.size}; righe mensili: ${mensili.length}; articoli con listino ricavabile: ${listino.size}`);
+  // Unità più usata per articolo (per righe vendute)
+  const umPerArticolo = new Map<number, string>();
+  for (const [r, cont] of umConteggi) {
+    const [codice] = [...cont.entries()].sort((a, b) => b[1] - a[1])[0];
+    umPerArticolo.set(r, UM_CUBO[codice]);
+  }
+  console.log(`Coppie cliente×articolo: ${perCoppia.size}; righe mensili: ${mensili.length}; articoli con listino ricavabile: ${listino.size}; con unità: ${umPerArticolo.size}`);
 
   if (dryRun) {
     console.log("Prova a secco: nessuna scrittura.");
     return;
   }
 
-  // 3. Scrittura clienti e mappa codice → id --------------------------------------
+  // 3. Listino e unità di misura degli articoli --------------------------------------
+  const articoliPayload = [...new Set([...listino.keys(), ...umPerArticolo.keys()])].map((r) => ({
+    cod_dav: articles[r][0],
+    descrizione_nts: descrizioni.get(articles[r][0])!,
+    ...(listino.has(r) ? { prezzo_listino: Math.round(listino.get(r)!.prezzo * 10000) / 10000 } : {}),
+    ...(umPerArticolo.has(r) ? { um: umPerArticolo.get(r) } : {}),
+  }));
+  for (let i = 0; i < articoliPayload.length; i += LOTTO) {
+    const { error } = await db.from("articoli").upsert(articoliPayload.slice(i, i + LOTTO), { onConflict: "cod_dav" });
+    if (error) throw new Error(`articoli: ${error.message}`);
+  }
+  console.log(`Articoli aggiornati (listino e unità): ${articoliPayload.length}`);
+  if (soloArticoli) {
+    console.log("Solo articoli: fine.");
+    return;
+  }
+
+  // 4. Scrittura clienti e mappa codice → id --------------------------------------
   for (let i = 0; i < clientiPayload.length; i += LOTTO) {
     const { error } = await db.from("clienti").upsert(clientiPayload.slice(i, i + LOTTO), { onConflict: "codice_nts" });
     if (error) throw new Error(`clienti: ${error.message}`);
@@ -149,18 +185,6 @@ async function main() {
   }
   const idPerIndice = clients.map(([codice]) => idCliente.get(codice.trim().toUpperCase()) ?? null);
   console.log(`Clienti scritti: ${clientiPayload.length}`);
-
-  // 4. Listino articoli ---------------------------------------------------------------
-  const listinoPayload = [...listino].map(([r, { prezzo }]) => ({
-    cod_dav: articles[r][0],
-    descrizione_nts: descrizioni.get(articles[r][0])!,
-    prezzo_listino: Math.round(prezzo * 10000) / 10000,
-  }));
-  for (let i = 0; i < listinoPayload.length; i += LOTTO) {
-    const { error } = await db.from("articoli").upsert(listinoPayload.slice(i, i + LOTTO), { onConflict: "cod_dav" });
-    if (error) throw new Error(`listino: ${error.message}`);
-  }
-  console.log(`Listino aggiornato su ${listinoPayload.length} articoli`);
 
   // 5. Storico acquisti ---------------------------------------------------------------
   const storicoPayload: Record<string, unknown>[] = [];
@@ -232,7 +256,7 @@ async function main() {
     nuovi: storicoPayload.length,
     aggiornati: mensiliPayload.length,
     errori: 0,
-    dettaglio_errori: [{ nota: `clienti ${clientiPayload.length}, listino ${listinoPayload.length}, condizioni ${condizioniPayload.length}, ultimo mese ${dati.meta.ultimoMese}` }],
+    dettaglio_errori: [{ nota: `clienti ${clientiPayload.length}, articoli ${articoliPayload.length}, condizioni ${condizioniPayload.length}, ultimo mese ${dati.meta.ultimoMese}` }],
     eseguito_da: "script",
   });
   if (eLog) console.warn(`import_log: ${eLog.message}`);

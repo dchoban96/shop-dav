@@ -10,6 +10,8 @@ import { leggiSessione } from "@/lib/sessione";
 import { aggiungiDaStorico } from "../azioni";
 import { Contenitore } from "@/components/Contenitore";
 import { LogoFornitore } from "@/components/LogoFornitore";
+import { Quantita } from "@/components/Quantita";
+import { IconaCarrello } from "@/components/Icone";
 import { ScaffaleMarchi, tileMarchio } from "@/components/ScaffaleMarchi";
 
 export const metadata: Metadata = { title: "Home" };
@@ -43,43 +45,36 @@ async function SezioneTuoiArticoli() {
                 famiglia: v.famiglia ? { id: 0, nome: v.famiglia } : null, fornitore: null, giacenza: null,
               };
               return (
-                <li key={v.cod_dav} className="flex items-center gap-3 py-3">
+                <li key={v.cod_dav} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
                   <LogoFornitore nome={v.marchio ?? "Marchio"} logo={v.logo_marchio} formato="riga" />
                   <span className="hidden sm:block">
                     <FotoArticolo articolo={articoloFinto} formato="piccola" />
                   </span>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 basis-48">
                     <Link href={`/catalogo/${encodeURIComponent(v.cod_dav)}`} className="block truncate font-semibold hover:underline">
                       {v.descrizione}
                     </Link>
                     <p className="text-xs text-slate">
                       ultimo acquisto {formattaData(v.ultima_data, { month: "2-digit", year: "numeric" })} · 12 mesi: {v.n_ordini_12m}{" "}
                       {v.n_ordini_12m === 1 ? "ordine" : "ordini"}, {v.qta_12m} {v.um ?? "conf."}
+                      {v.pezzi_confezione ? ` · conf. da ${v.pezzi_confezione}` : ""}
                       {v.fatturato_12m > 0 ? `, ${formattaPrezzo(v.fatturato_12m)}` : ""}
                     </p>
                   </div>
-                  <label htmlFor={`qta-${v.cod_dav}`} className="sr-only">
-                    Quantità {v.descrizione}
-                  </label>
-                  <input
-                    id={`qta-${v.cod_dav}`}
-                    name={`qta:${v.cod_dav}`}
-                    type="number"
-                    min={0}
-                    step={1}
-                    defaultValue={v.ultima_quantita ?? 1}
-                    inputMode="numeric"
-                    className="h-10 w-16 rounded-md border border-azzurro bg-bianco text-center text-base"
-                  />
-                  <button
-                    type="submit"
-                    name="solo"
-                    value={v.cod_dav}
-                    className="flex h-10 w-10 items-center justify-center rounded-md border border-navy text-lg font-semibold text-navy hover:bg-ice"
-                    aria-label={`Aggiungi ${v.descrizione} al carrello`}
-                  >
-                    +
-                  </button>
+                  {/* Su telefono i comandi vanno a capo sotto il testo e si allineano a destra */}
+                  <div className="flex basis-full items-center justify-end gap-2 sm:ml-auto sm:basis-auto">
+                    <Quantita name={`qta:${v.cod_dav}`} id={`qta-${v.cod_dav}`} iniziale={v.ultima_quantita ?? 1} etichetta={v.descrizione} um={v.um ?? "conf."} />
+                    <button
+                      type="submit"
+                      name="solo"
+                      value={v.cod_dav}
+                      className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-viola px-3 text-sm font-semibold text-bianco transition-colors hover:bg-[#5a40a8]"
+                      aria-label={`Aggiungi ${v.descrizione} al carrello`}
+                    >
+                      <IconaCarrello />
+                      <span className="hidden md:inline">Aggiungi</span>
+                    </button>
+                  </div>
                 </li>
               );
             })}
@@ -160,7 +155,8 @@ export default function HomeCliente() {
   return (
     <Contenitore className="py-8">
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
+        {/* min-w-0: senza, la colonna della griglia si allarga quanto il titolo più lungo (truncate) e sfora su telefono */}
+        <div className="min-w-0 space-y-6">
           <Suspense fallback={<p className="text-sm text-slate">Carico i tuoi articoli…</p>}>
             <SezioneTuoiArticoli />
           </Suspense>
