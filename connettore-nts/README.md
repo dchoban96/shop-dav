@@ -142,6 +142,27 @@ Serve per progettare l'import del listino 2 e degli sconti cliente. Non scrive n
 
 Di anagra e artico il file riporta solo le colonne utili ai prezzi: niente indirizzi, partite IVA o contatti.
 
+## Ricognizione documenti e scadenze (una volta, per il brief "Documenti e pagamenti del cliente")
+
+Comando di **sola lettura** su DAVNTS: colonne e conteggi di `testmag`/`movmag`, tabelle con nomi da scadenze, pagamenti,
+IVA, lotti, trasporto, le query che Graphite e Business hanno eseguito davvero (cache dei piani di SQL Server),
+l'anagrafica e i documenti dei clienti di prova, un DDT e una fattura campione con tutte le righe e le tabelle collegate.
+Serve a individuare il mapping prima di costruire la sincronizzazione. Non scrive niente in NTS né in Supabase.
+
+1. Aggiornare il connettore sul PC dell'ufficio (`git pull`, poi `npm ci` e `npm run build`). Nel `.env` usare `sa`.
+2. Lanciare con i due clienti di prova e i due documenti delle stampe consegnate:
+   ```powershell
+   npm run esplora-documenti -- --clienti 140101656,140100402 --ddt 18931 --fattura 5113
+   ```
+   Opzioni: `--anno 2026` (anno dei documenti campione, predefinito: anno corrente), `--mesi 24` (periodo dei conteggi).
+   Meglio lanciarlo **subito dopo** una ricezione dati di un palmare o una stampa di fattura da Business: le loro
+   query sulle scadenze sono ancora nella cache del server e finiscono nella sezione 5 del file.
+3. Il file finisce in `esplorazione\documenti-AAAAMMGG-hhmmss.txt` (fuori dal repo). Mandarlo a chi sviluppa lo shop
+   insieme alle due stampe (cartella `esempi\` del repo, anch'essa fuori da git).
+
+Nel file non compaiono mai colonne di costo, margine, provvigione, fido o note interne (filtro sul nome della colonna).
+Compaiono invece anagrafica, documenti e partite dei due clienti di prova: il file resta in azienda.
+
 ## Punti aperti
 
 1. **Colonna di `testord` con il riferimento.** Dopo il punto 2 del piano di prova:

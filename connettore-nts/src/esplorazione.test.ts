@@ -35,3 +35,19 @@ test("tabella di testo allineata e limitata", () => {
   assert.match(t[3], /altre 1 righe/);
   assert.deepEqual(tabellaTesto([]), ["  (nessuna riga)"]);
 });
+
+test("documenti: colonne riservate escluse, chiave documento e colonne scadenza riconosciute", async () => {
+  const { chiaveDocumento, colonneAmmesse, colonneElencoTestate, colonneScadenza, verticale } = await import("./esplorazione.js");
+  assert.deepEqual(colonneAmmesse(["tm_totdoc", "tm_costo", "tm_provv1", "tm_fido", "tm_note", "tm_margine"]), ["tm_totdoc"]);
+  assert.deepEqual(chiaveDocumento(["codditt", "cm_tipork", "cm_anno", "cm_serie", "cm_numdoc", "cm_codiva"]), {
+    tipork: "cm_tipork",
+    anno: "cm_anno",
+    serie: "cm_serie",
+    numdoc: "cm_numdoc",
+  });
+  assert.equal(chiaveDocumento(["sc_conto", "sc_datscad"]), null);
+  assert.deepEqual(colonneScadenza(["codditt", "sc_conto", "sc_datscad", "sc_import"]), { conto: ["sc_conto"], data: "sc_datscad" });
+  const elenco = colonneElencoTestate(["codditt", "tm_tipork", "tm_anno", "tm_serie", "tm_numdoc", "tm_datdoc", "tm_conto", "tm_totdoc", "tm_indir", "tm_costo", "tm_colli"]);
+  assert.deepEqual(elenco, ["tm_tipork", "tm_anno", "tm_serie", "tm_numdoc", "tm_datdoc", "tm_conto", "tm_totdoc", "tm_colli"]);
+  assert.deepEqual(verticale({ tm_numdoc: 18931, tm_costo: 1, tm_datdoc: null }), ["  tm_numdoc                18931", "  tm_datdoc                NULL"]);
+});

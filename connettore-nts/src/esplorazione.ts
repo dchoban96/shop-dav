@@ -70,3 +70,66 @@ export function tabellaTesto(righe: Record<string, unknown>[], max = 50): string
   if (righe.length > max) out.push(`  … altre ${righe.length - max} righe non mostrate`);
   return out;
 }
+
+// ---------------------------------------------------------------------------------------
+// Supporto a `esplora-documenti` (DDT, fatture, note di credito, scadenze, pagamenti)
+// ---------------------------------------------------------------------------------------
+
+/** Nomi di oggetti candidati per scadenze, pagamenti, IVA, lotti, trasporto, agenti, destinazioni. */
+export const MODELLO_OGGETTI_DOCUMENTI = [
+  "%scad%", "%partit%", "%incas%", "%insol%", "%effet%", "%pagam%", "%tabpag%", "%iva%", "%cast%", "%lott%",
+  "%vett%", "%caus%", "%trasp%", "%porto%", "%aspet%", "%dest%", "%tabcage%", "%zona%", "%tabcat%", "%valu%", "%testmag%", "%movmag%",
+];
+
+/** Parole da cercare nei nomi delle colonne di tutto DAVNTS (colonne che servono alla copia del documento). */
+export const PAROLE_COLONNE = [
+  "scad", "partit", "insol", "pagat", "incas", "residu", "lott", "rifddt", "rifbol", "ddt", "numbol", "rifor", "numord", "vett", "colli", "peso",
+  "aspet", "porto", "caus", "protoc", "telem", "sdi", "destin", "codpag", "ratei", "rata",
+];
+
+/**
+ * Colonne da NON mostrare mai nel file (e da non portare in Supabase): costi, margini, provvigioni,
+ * fido, note interne. Il controllo è sul nome della colonna.
+ */
+export const RISERVATE = /cost|marg|provv|fido|affid|note|annot|memo|ricar|utile/i;
+
+export function colonneAmmesse(colonne: string[]): string[] {
+  return colonne.filter((c) => !RISERVATE.test(c));
+}
+
+/**
+ * Colonne di una tabella che identificano un documento di magazzino (tipo, anno, serie, numero),
+ * riconosciute dal suffisso del nome (tm_tipork, mm_numdoc, cm_anno, …). `null` se mancano anno o numero.
+ */
+export function chiaveDocumento(colonne: string[]): { tipork?: string; anno: string; serie?: string; numdoc: string } | null {
+  const trova = (re: RegExp) => colonne.find((c) => re.test(c));
+  const anno = trova(/_anno(doc)?$/i);
+  const numdoc = trova(/_numdoc$/i);
+  if (!anno || !numdoc) return null;
+  return { tipork: trova(/_tipork$/i), anno, serie: trova(/_serie$/i), numdoc };
+}
+
+/** Colonne "conto cliente" e "data di scadenza" di una tabella (per le partite del cliente di prova). */
+export function colonneScadenza(colonne: string[]): { conto: string[]; data: string | null } {
+  return {
+    conto: colonne.filter((c) => /conto$/i.test(c) || /_codcli$/i.test(c)),
+    data: colonne.find((c) => /scad/i.test(c) && /dat/i.test(c)) ?? colonne.find((c) => /scad/i.test(c)) ?? null,
+  };
+}
+
+/**
+ * Colonne della testata da mostrare nell'elenco documenti di un cliente: chiave, data, conto e
+ * tutto ciò che somiglia a totali, pagamento, colli, peso, agente, destinazione, causale, vettore.
+ */
+export function colonneElencoTestate(colonne: string[]): string[] {
+  const fisse = /_(tipork|anno|serie|numdoc|datdoc|conto)$/i;
+  const utili = /tot|impon|impos|iva|codpag|colli|peso|codage|dest|caus|vett|tipdoc|tipo|flag|stato|riv|rif/i;
+  return colonneAmmesse(colonne).filter((c) => fisse.test(c) || utili.test(c)).slice(0, 30);
+}
+
+/** Record in verticale ("colonna: valore" per riga), per leggere una testata intera. */
+export function verticale(r: Record<string, unknown>, salta: RegExp = RISERVATE): string[] {
+  return Object.entries(r)
+    .filter(([k]) => !salta.test(k))
+    .map(([k, v]) => `  ${k.padEnd(24)} ${testo(v)}`);
+}
