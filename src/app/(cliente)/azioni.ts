@@ -14,6 +14,7 @@ import {
   segnaEmailInviata,
   type Cliente,
 } from "@/lib/dati/ordini";
+import { dettaglioDocumento } from "@/lib/dati/documenti";
 import { leggiSessione } from "@/lib/sessione";
 
 async function clienteCorrente(): Promise<Cliente> {
@@ -123,6 +124,25 @@ export async function riordina(formData: FormData): Promise<void> {
   const dettaglio = id ? await ordinePerId(c.id, id) : null;
   if (!dettaglio) redirect("/ordini");
   for (const r of dettaglio.righe) await aggiungiAlCarrello(c.id, r.cod_dav, r.quantita);
+  refresh();
+  redirect("/carrello");
+}
+
+/**
+ * "Riordina questi articoli" da un DDT: gli articoli del catalogo online, con le quantità del DDT
+ * (la stessa unità di misura NTS del carrello). L'articolo generico M e quelli tolti dal sito si saltano.
+ */
+export async function riordinaDocumento(formData: FormData): Promise<void> {
+  const c = await clienteCorrente();
+  const id = intero(formData.get("documento"));
+  const d = id ? await dettaglioDocumento(id, c.id) : null;
+  if (!d || d.documento.tipo !== "ddt") redirect("/ordini?scheda=ddt");
+  const quantita = new Map<string, number>();
+  for (const r of d.righe) {
+    if (r.tipo_riga !== "articolo" || !r.in_catalogo || !r.cod_dav || !(Number(r.quantita) > 0)) continue;
+    quantita.set(r.cod_dav, (quantita.get(r.cod_dav) ?? 0) + Number(r.quantita));
+  }
+  for (const [cod, q] of quantita) await aggiungiAlCarrello(c.id, cod, q);
   refresh();
   redirect("/carrello");
 }

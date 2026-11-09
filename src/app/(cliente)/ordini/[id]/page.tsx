@@ -10,6 +10,8 @@ import { riordina } from "../../azioni";
 import { Contenitore } from "@/components/Contenitore";
 import { LogoFornitore } from "@/components/LogoFornitore";
 import { riepilogoSconti, testoSconto } from "@/lib/sconti";
+import { ddtDellOrdine } from "@/lib/dati/documenti";
+import { dataCorta, numero } from "@/components/documenti/formato";
 
 export const metadata: Metadata = { title: "Ordine" };
 
@@ -23,6 +25,7 @@ async function Dettaglio({ params, searchParams }: Props) {
   const dettaglio = Number.isInteger(Number(id)) ? await ordinePerId(cliente.id, Number(id)) : null;
   if (!dettaglio) notFound();
   const { ordine, righe } = dettaglio;
+  const ddt = await ddtDellOrdine(cliente.id, ordine.riferimento_nts);
   const { listino, risparmio } = riepilogoSconti(righe);
   const conSconto = risparmio >= 0.005;
 
@@ -54,6 +57,21 @@ async function Dettaglio({ params, searchParams }: Props) {
         <dd>{formattaData(ordine.data_consegna_richiesta, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</dd>
         <dt className="text-slate">Note</dt>
         <dd>{ordine.note ?? "—"}</dd>
+        {ddt.length > 0 && (
+          <>
+            <dt className="text-slate">Consegnato con</dt>
+            <dd>
+              {ddt.map((x, i) => (
+                <span key={x.id}>
+                  {i > 0 && ", "}
+                  <Link href={`/ordini/ddt/${x.id}`} className="font-semibold underline underline-offset-2">
+                    DDT n. {numero(x.numero)} del {dataCorta(x.data_doc)}
+                  </Link>
+                </span>
+              ))}
+            </dd>
+          </>
+        )}
       </dl>
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-azzurro/40 bg-bianco p-4">

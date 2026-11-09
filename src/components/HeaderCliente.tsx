@@ -32,6 +32,10 @@ export function HeaderCliente({ codiceCliente, ragioneSociale, demo, nelCarrello
             <span className="hidden max-w-[200px] truncate text-sm text-slate xl:inline" title={ragioneSociale}>
               {ragioneSociale ?? "Cliente"} <span className="font-semibold text-navy">{codiceCliente}</span>
             </span>
+            {/* Scadenze e pagamenti: link discreto dal conto del cliente (niente banner altrove) */}
+            <Link href="/pagamenti" className="text-sm font-semibold text-navy underline-offset-4 hover:underline">
+              Pagamenti
+            </Link>
             <form action={esci}>
               <button type="submit" className="rounded-md border border-navy px-4 py-2 text-sm font-semibold text-navy hover:bg-ice">
                 Esci

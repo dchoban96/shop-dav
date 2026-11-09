@@ -251,6 +251,55 @@ async function main() {
   await zittisci(90);
   assert((await controlla()) === "avviso inviato" && (await chiamate()) === 3, "silenzio lungo: promemoria dopo un'ora");
 
+  // Documenti e scadenze (0009): l'ordine SHOP-000001 (in NTS) passa a consegnato quando arriva il suo DDT
+  await db.exec(`
+    insert into documenti (chiave_nts, cliente_id, tipo, anno, numero, data_doc, imponibile, iva, totale)
+      values ('B/2026//100', 1, 'ddt', 2026, 100, '2026-10-27', 100, 10, 110),
+             ('A/2026//50', 1, 'fattura', 2026, 50, '2026-10-31', 100, 10, 110),
+             ('B/2026//101', 2, 'ddt', 2026, 101, '2026-10-27', 200, 20, 220),
+             ('B/2026//102', 1, 'ddt', 2026, 102, '2026-10-28', 5, 0.5, 5.5);
+    update documenti set presente_in_nts = false where chiave_nts = 'B/2026//102';
+    insert into righe_documento (documento_id, riga, cod_dav, descrizione, quantita, importo, rif_ordine_numero, rif_ordine_shop)
+      values (1, 1, 'FARMIR', 'FARCITURA MIRTILLI KG.6 IR', 2, 100, 4321, 'SHOP-000001'),
+             (3, 1, 'ALTRO', 'ARTICOLO', 1, 200, null, null);
+    insert into riepilogo_iva (documento_id, codice_iva, aliquota, imponibile, imposta) values (2, '10', 10, 100, 10), (3, '10', 10, 200, 20);
+    insert into scadenze (chiave_nts, cliente_id, documento_id, data_scadenza, importo, residuo, stato)
+      values ('S1', 1, 2, '2026-10-31', 110, 110, 'aperta'), ('S2', 2, 3, '2026-10-31', 220, 220, 'insoluta');
+  `);
+  const consegnato = (await db.query<{ stato: string }>(`select stato from ordini where id = 1`)).rows[0];
+  assert(consegnato.stato === "consegnato", `DDT con rif. SHOP-000001: ordine ${consegnato.stato} invece di consegnato`);
+  const logConsegna = (await db.query<{ d: string }>(`select dettaglio d from log_nts where ordine_id = 1 and evento = 'consegnato'`)).rows[0];
+  assert(logConsegna?.d === "DDT 100 del 27/10/2026", `log consegna: ${JSON.stringify(logConsegna)}`);
+  const tocca = (await db.query<{ t: string }>(`update scadenze set stato = 'pagata', residuo = 0 where chiave_nts = 'S1' returning aggiornato_il::text t`)).rows[0];
+  assert(tocca.t, "scadenze: aggiornato_il");
+  await db.exec(`update scadenze set stato = 'aperta', residuo = 110 where chiave_nts = 'S1'`);
+
+  await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', false);`);
+  const docC1 = (await db.query<{ chiave_nts: string }>(`select chiave_nts from documenti order by chiave_nts`)).rows.map((r) => r.chiave_nts);
+  assert(docC1.join(",") === "A/2026//50,B/2026//100", `RLS documenti cliente 1: ${docC1.join(",")} (niente documenti altrui né spariti da NTS)`);
+  const righeC1 = Number((await db.query<{ n: string }>(`select count(*) n from righe_documento`)).rows[0].n);
+  assert(righeC1 === 1, `RLS righe_documento cliente 1: ${righeC1}`);
+  const ivaC1 = Number((await db.query<{ n: string }>(`select count(*) n from riepilogo_iva`)).rows[0].n);
+  assert(ivaC1 === 1, `RLS riepilogo_iva cliente 1: ${ivaC1}`);
+  const scadC1 = (await db.query<{ chiave_nts: string }>(`select chiave_nts from scadenze`)).rows.map((r) => r.chiave_nts);
+  assert(scadC1.join(",") === "S1", `RLS scadenze cliente 1: ${scadC1.join(",")}`);
+  const altrui = await db.query(`select id from documenti where chiave_nts = 'B/2026//101'`);
+  assert(altrui.rows.length === 0, "documento di un altro cliente per chiave: negato");
+  let scritturaNegata = false;
+  try {
+    await db.query(`update documenti set totale = 0 where cliente_id = 1`);
+    scritturaNegata = Number((await db.query<{ n: string }>(`select count(*) n from documenti where totale = 0`)).rows[0].n) === 0;
+  } catch {
+    scritturaNegata = true;
+  }
+  assert(scritturaNegata, "il cliente non può modificare i documenti");
+  const syncC1 = Number((await db.query<{ n: string }>(`select count(*) n from sync_stato`)).rows[0].n);
+  assert(syncC1 === 0, "sync_stato riservato all'admin");
+  await db.exec(`select set_config('request.jwt.claim.sub', '22222222-2222-2222-2222-222222222222', false);`);
+  const docAdmin = Number((await db.query<{ n: string }>(`select count(*) n from documenti`)).rows[0].n);
+  assert(docAdmin === 4, `admin vede tutti i documenti, anche spariti da NTS: ${docAdmin}`);
+  await db.exec(`reset role;`);
+
   console.log("Tutti i controlli superati.");
   await db.close();
 }

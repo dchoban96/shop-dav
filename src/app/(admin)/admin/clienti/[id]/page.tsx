@@ -6,6 +6,7 @@ import { formattaPrezzo } from "@/lib/dati/catalogo";
 import { schedaCliente } from "@/lib/dati/admin";
 import { formattaData, GIORNI_SETTIMANA, storicoCliente } from "@/lib/dati/ordini";
 import { Contenitore } from "@/components/Contenitore";
+import { DocumentiCliente } from "@/components/admin/DocumentiCliente";
 
 /** Sconto percentuale implicito tra prezzo fisso e listino, es. "≈ 9,2 %"; null se non calcolabile o nullo. */
 function scontoImplicito(prezzo: number | null, listino: number | null): string | null {
@@ -56,7 +57,7 @@ async function Scheda({ params }: Props) {
             <dt className="text-slate">Giorni consegna</dt>
             <dd>{giorni.length ? giorni.map((g) => GIORNI_SETTIMANA[g - 1]).join(", ") : "—"}</dd>
             <dt className="text-slate">Pagamento</dt>
-            <dd>{testo(c.metodo_pagamento)}</dd>
+            <dd>{testo([c.pagamento_codice, c.pagamento_desc].filter(Boolean).join(" ") || c.metodo_pagamento)}</dd>
             <dt className="text-slate">Telefoni ordini</dt>
             <dd>
               {dati.telefoni.length
@@ -104,6 +105,10 @@ async function Scheda({ params }: Props) {
           </p>
         </section>
       </div>
+
+      <Suspense fallback={<p className="mt-8 text-sm text-slate">Carico documenti e scadenze…</p>}>
+        <DocumentiCliente clienteId={n} />
+      </Suspense>
 
       <section className="mt-8">
         <h2 className="text-2xl">Ordini dal portale</h2>

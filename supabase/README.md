@@ -15,6 +15,12 @@ Migrazioni SQL in `migrations/`, in ordine:
 8. `0008_avviso_connettore_nts.sql` — job pg_cron ogni minuto (`controlla_connettore_nts`): se il connettore
    NTS tace da 5 minuti manda l'email all'ufficio via pg_net → Resend, con la chiave `resend_api_key` del Vault.
    Il trigger su `impostazioni` mette `ricevuto_il` (ora del database) nell'heartbeat.
+9. `0009_documenti.sql` — documenti del cliente da NTS: `documenti` (DDT, fatture, note di credito),
+   `righe_documento`, `riepilogo_iva`, `scadenze`, `invii_documenti`, `sync_stato`; `clienti.pagamento_codice`
+   e `pagamento_desc`. Le scrive solo il connettore (service role); il cliente legge i propri documenti ancora in NTS.
+   Una riga di DDT con `rif_ordine_shop = 'SHOP-…'` porta l'ordine dello shop a "consegnato".
+   Lo shop funziona anche prima di questa migrazione: DDT, fatture e pagamenti mostrano "in arrivo".
+   Dati di prova per i clienti demo: `npm run demo-documenti` (toglierli: `-- --cancella`).
 
 ## Applicarle
 

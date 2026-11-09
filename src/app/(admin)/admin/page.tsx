@@ -6,6 +6,7 @@ import { elencoOrdini, leggiCruscotto } from "@/lib/dati/admin";
 import { formattaData } from "@/lib/dati/ordini";
 import { Contenitore } from "@/components/Contenitore";
 import { PannelloNts } from "@/components/admin/PannelloNts";
+import { PannelloSync } from "@/components/admin/PannelloSync";
 import { contaDaControllare } from "@/lib/dati/nts";
 
 export const metadata = { title: "Cruscotto" };
@@ -22,6 +23,7 @@ async function Contenuto() {
   return (
     <>
       <PannelloNts />
+      <PannelloSync />
       <dl className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {numeri.map((n) => (
           <Link key={n.testo} href={n.href} className="rounded-lg bg-ice p-5 hover:bg-azzurro/30">
