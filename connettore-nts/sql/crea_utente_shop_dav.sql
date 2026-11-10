@@ -27,10 +27,16 @@ CREATE USER shop_dav FOR LOGIN shop_dav;
 GRANT SELECT ON dbo.testord TO shop_dav;
 GRANT SELECT ON dbo.anagra  TO shop_dav;
 GRANT SELECT ON dbo.artico  TO shop_dav;
+-- import prezzi (npm run importa-prezzi): listini, sconti e storico di ordini, DDT e fatture
+GRANT SELECT ON dbo.listini TO shop_dav;
+GRANT SELECT ON dbo.sconti  TO shop_dav;
+GRANT SELECT ON dbo.movord  TO shop_dav;
+GRANT SELECT ON dbo.testmag TO shop_dav;
+GRANT SELECT ON dbo.movmag  TO shop_dav;
 GO
 
 /*
   Verifica (connessi in SSMS come shop_dav, oppure "npm run controlla" con MSSQL_USER=shop_dav):
     SELECT TOP 1 * FROM NTS_FRONTIERA.dbo.GPH_TESTATA_NTS;   -- deve funzionare
-    SELECT TOP 1 * FROM DAVNTS.dbo.movord;                   -- deve dare errore di permessi
+    SELECT TOP 1 * FROM DAVNTS.dbo.provvig;                  -- deve dare errore di permessi (provvigioni)
 */

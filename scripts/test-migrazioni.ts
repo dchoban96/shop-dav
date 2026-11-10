@@ -300,6 +300,40 @@ async function main() {
   assert(docAdmin === 4, `admin vede tutti i documenti, anche spariti da NTS: ${docAdmin}`);
   await db.exec(`reset role;`);
 
+  // Prezzi da NTS (0010): listino del cliente, sconti di listino, prezzo speciale, netto al centesimo
+  await db.exec(`
+    insert into articoli (cod_dav, descrizione_nts, famiglia_id, fornitore_id, prezzo_listino)
+      values ('OLIGI5', 'OLIO SEMI GIRASOLE LT.5', 2, 1, 1.99), ('MOZGIU1', 'MOZZARELLA', 2, 1, 9.24);
+    insert into listini_nts (cod_dav, listino, prezzo) values ('OLIGI5', 2, 2.36), ('OLIGI5', 1, 1.56), ('MOZGIU1', 2, 9.24);
+    insert into listini_nts (cod_dav, listino, prezzo, sconto1) values ('ALTRO', 2, 10.00, 10);
+    insert into clienti (codice_nts, ragione_sociale, listino_nts) values ('C004', 'Listino 2', 2), ('C005', 'Listino 1', 1), ('C006', 'Listino 0', 0);
+    insert into condizioni_cliente (cliente_id, tipo, cod_dav, sconto1, origine, rif_storico)
+      select id, 'articolo', 'OLIGI5', 15, 'storico_sconto', 'Ordine 1 del 06/11/2026: 2,28 -15 %' from clienti where codice_nts = 'C004';
+    insert into condizioni_cliente (cliente_id, tipo, cod_dav, prezzo_accordato, origine)
+      select id, 'articolo', 'MOZGIU1', 6.90, 'storico_ps' from clienti where codice_nts = 'C004';
+  `);
+  const pc = async (codice: string, art: string) =>
+    (await db.query<P>(`select * from prezzo_cliente((select id from clienti where codice_nts = '${codice}'), '${art}')`)).rows[0];
+  const ol = await pc("C004", "OLIGI5");
+  assert(Number(ol.listino) === 2.36 && Number(ol.sconto1) === 15 && Number(ol.prezzo_finale) === 2.01, `OLIGI5 storico sconto: ${JSON.stringify(ol)}`);
+  const mz = await pc("C004", "MOZGIU1");
+  assert(Number(mz.prezzo_finale) === 6.9 && mz.origine === "prezzo_accordato" && Number(mz.listino) === 9.24, `MOZGIU1 prezzo speciale: ${JSON.stringify(mz)}`);
+  const l1 = await pc("C005", "OLIGI5");
+  assert(Number(l1.listino) === 1.56 && Number(l1.prezzo_finale) === 1.56 && l1.origine === "listino", `listino 1 del cliente: ${JSON.stringify(l1)}`);
+  const l0 = await pc("C006", "ALTRO");
+  assert(Number(l0.listino) === 10 && Number(l0.sconto1) === 10 && Number(l0.prezzo_finale) === 9 && l0.origine === "listino", `listino 0 -> 2 con sconto di listino: ${JSON.stringify(l0)}`);
+  const rip = await pc("C006", "A4803");
+  assert(Number(rip.listino) === 20 && Number(rip.prezzo_finale) === 20, `senza listini_nts vale articoli.prezzo_listino: ${JSON.stringify(rip)}`);
+  const vecchio = (await db.query<P>(`select * from prezzo_cliente(1, 'FARMIR')`)).rows[0];
+  assert(Number(vecchio.prezzo_finale) === 22.8, `famiglia invariata: ${JSON.stringify(vecchio)}`);
+  let origineNegata = false;
+  try {
+    await db.exec(`insert into condizioni_cliente (cliente_id, tipo, origine) values (1, 'generale', 'inventata')`);
+  } catch {
+    origineNegata = true;
+  }
+  assert(origineNegata, "origine non prevista deve essere rifiutata");
+
   console.log("Tutti i controlli superati.");
   await db.close();
 }

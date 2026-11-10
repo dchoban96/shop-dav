@@ -13,11 +13,10 @@
  *   - articoli.prezzo_listino   prezzo di listino unitario = valore listino / quantità
  *                               dell'ultimo mese in cui l'articolo è stato venduto
  *   - articoli.um       unità di misura più usata nelle vendite (cubo `u`: 0 = PZ, 1 = KG, 2 = LT)
- *   - condizioni_cliente (tipo articolo, prezzo_accordato) = ultimo prezzo netto unitario
- *                               fatturato a quel cliente per quell'articolo
  *
- * Le condizioni così create sono un ripiego finché non arriva l'export NTS delle condizioni
- * commerciali: quell'import le sostituirà. Idempotente: ricaricare lo stesso file non duplica.
+ * Le condizioni commerciali NON vengono più da qui: le scrive il connettore NTS
+ * (`npm run importa-prezzi` in connettore-nts, dal 10/11/2026) leggendo listini, sconti e storico.
+ * Idempotente: ricaricare lo stesso file non duplica.
  * Usa il service role (bypassa RLS): solo da macchina dell'ufficio o job.
  */
 import { existsSync, readFileSync } from "node:fs";
@@ -188,7 +187,6 @@ async function main() {
 
   // 5. Storico acquisti ---------------------------------------------------------------
   const storicoPayload: Record<string, unknown>[] = [];
-  const condizioniPayload: Record<string, unknown>[] = [];
   for (const [k, a] of perCoppia) {
     const [ci, ri] = k.split("|").map(Number);
     const clienteId = idPerIndice[ci];
@@ -207,33 +205,12 @@ async function main() {
       fatturato_tot: Math.round(a.vTot * 100) / 100,
       prima_data: primoGiorno(yms[a.primoM]),
     });
-    if (a.qUlt > 0 && a.vUlt > 0) {
-      condizioniPayload.push({
-        cliente_id: clienteId,
-        tipo: "articolo",
-        cod_dav: codDav,
-        prezzo_accordato: Math.round((a.vUlt / a.qUlt) * 10000) / 10000,
-        valido_dal: primoGiorno(yms[a.ultimoM]),
-      });
-    }
   }
   for (let i = 0; i < storicoPayload.length; i += LOTTO) {
     const { error } = await db.from("storico_acquisti").upsert(storicoPayload.slice(i, i + LOTTO), { onConflict: "cliente_id,cod_dav" });
     if (error) throw new Error(`storico_acquisti: ${error.message}`);
   }
   console.log(`Storico acquisti: ${storicoPayload.length} righe`);
-
-  // 6. Condizioni per articolo (ultimo prezzo netto): via le precedenti dello stesso tipo, poi inserimento
-  const idClienti = [...new Set(storicoPayload.map((s) => s.cliente_id as number))];
-  for (let i = 0; i < idClienti.length; i += 200) {
-    const { error } = await db.from("condizioni_cliente").delete().eq("tipo", "articolo").in("cliente_id", idClienti.slice(i, i + 200));
-    if (error) throw new Error(`condizioni (pulizia): ${error.message}`);
-  }
-  for (let i = 0; i < condizioniPayload.length; i += LOTTO) {
-    const { error } = await db.from("condizioni_cliente").insert(condizioniPayload.slice(i, i + LOTTO));
-    if (error) throw new Error(`condizioni: ${error.message}`);
-  }
-  console.log(`Condizioni per articolo (ultimo prezzo netto): ${condizioniPayload.length}`);
 
   // 7. Acquisti mensili ---------------------------------------------------------------
   const mensiliPayload = mensili.flatMap((x) => {
@@ -256,7 +233,7 @@ async function main() {
     nuovi: storicoPayload.length,
     aggiornati: mensiliPayload.length,
     errori: 0,
-    dettaglio_errori: [{ nota: `clienti ${clientiPayload.length}, articoli ${articoliPayload.length}, condizioni ${condizioniPayload.length}, ultimo mese ${dati.meta.ultimoMese}` }],
+    dettaglio_errori: [{ nota: `clienti ${clientiPayload.length}, articoli ${articoliPayload.length}, ultimo mese ${dati.meta.ultimoMese}` }],
     eseguito_da: "script",
   });
   if (eLog) console.warn(`import_log: ${eLog.message}`);

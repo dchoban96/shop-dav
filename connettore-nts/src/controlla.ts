@@ -3,7 +3,7 @@
  * - connessione a SQL Server e versione;
  * - colonne reali delle tabelle di frontiera (tipo, precisione, scala, lunghezza);
  * - letture su anagra, artico, testord (permessi del login);
- * - una lettura che shop_dav NON deve poter fare (DAVNTS.dbo.movord): con sa riesce, con shop_dav deve fallire;
+ * - una lettura che shop_dav NON deve poter fare (DAVNTS.dbo.provvig): con sa riesce, con shop_dav deve fallire;
  * - colonna di testord per il riferimento, se impostata;
  * - Supabase: lettura degli ordini in coda.
  */
@@ -60,10 +60,10 @@ async function main() {
         }
       }
       try {
-        await pool.request().query("SELECT TOP 1 1 AS x FROM DAVNTS.dbo.movord");
-        info(`lettura DAVNTS.dbo.movord riuscita: normale con sa, con shop_dav deve FALLIRE (permessi troppo larghi)`);
+        await pool.request().query("SELECT TOP 1 1 AS x FROM DAVNTS.dbo.provvig");
+        info(`lettura DAVNTS.dbo.provvig riuscita: normale con sa, con shop_dav deve FALLIRE (permessi troppo larghi)`);
       } catch {
-        ok("lettura DAVNTS.dbo.movord negata (permessi minimi corretti)");
+        ok("lettura DAVNTS.dbo.provvig negata (permessi minimi corretti)");
       }
 
       // Date: scritte e lette nell'ora locale (useUTC: false). Punto 2 del piano di prova:

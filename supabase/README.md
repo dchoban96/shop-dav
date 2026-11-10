@@ -22,6 +22,10 @@ Migrazioni SQL in `migrations/`, in ordine:
    Lo shop funziona anche prima di questa migrazione: DDT, fatture e pagamenti mostrano "in arrivo".
    Dati di prova per i clienti demo: `npm run demo-documenti` (toglierli: `-- --cancella`).
 
+10. `0010_prezzi_nts.sql` — prezzi da NTS: tabella `listini_nts` (listino per articolo e numero, al centesimo, con
+    sconti di listino), `clienti.listino_nts`, `condizioni_cliente.origine` e `rif_storico`; `prezzo_cliente` usa il
+    listino del cliente e arrotonda il prezzo finale al centesimo. I dati li scrive il connettore (`importa-prezzi`).
+
 ## Applicarle
 
 Con la CLI Supabase collegata al progetto:
@@ -44,6 +48,6 @@ e controlla descrizione pulita, disponibilità, precedenza dei prezzi e le polic
 
 ## Convenzioni
 
-- Sconti in percentuale (10 = 10 %). Prezzi senza IVA, 4 decimali.
+- Sconti in percentuale (10 = 10 %). Prezzi senza IVA; listini da NTS e prezzo finale al centesimo (0010).
 - `giorni_consegna`: 1 = lunedì … 6 = sabato.
 - Il service role bypassa RLS: solo per import e job lato server.

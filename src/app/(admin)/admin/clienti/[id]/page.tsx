@@ -17,6 +17,17 @@ function scontoImplicito(prezzo: number | null, listino: number | null): string 
   return pct > 0 ? `≈ ${n} %` : `≈ +${n} %`;
 }
 
+/** Da dove viene la condizione (condizioni_cliente.origine, import prezzi da NTS). */
+const ORIGINE: Record<string, string> = {
+  storico_ps: "Prezzo speciale (storico)",
+  storico_sconto: "Sconto da storico",
+  nts_prezzo: "Prezzo personale NTS",
+  nts_sconto: "Sconto NTS",
+  nts_generale: "Sconto generale NTS",
+  vendite: "Ultimo netto fatturato (provvisorio)",
+  manuale: "Manuale",
+};
+
 export const metadata = { title: "Cliente" };
 
 type Props = { params: Promise<{ id: string }> };
@@ -76,6 +87,7 @@ async function Scheda({ params }: Props) {
               <thead className="text-left">
                 <tr className="border-b border-azzurro/40">
                   <th className="etichetta py-1.5">Su</th>
+                  <th className="etichetta py-1.5">Origine</th>
                   <th className="etichetta py-1.5 text-right">Sconti</th>
                   <th className="etichetta py-1.5 text-right">Prezzo fisso</th>
                 </tr>
@@ -85,6 +97,10 @@ async function Scheda({ params }: Props) {
                   <tr key={i} className="border-b border-ice">
                     <td className="py-1.5">
                       <span className="text-xs text-slate">{k.tipo}</span> {k.riferimento}
+                    </td>
+                    <td className="py-1.5">
+                      {k.origine ? (ORIGINE[k.origine] ?? k.origine) : "—"}
+                      {k.rif_storico && <span className="block text-xs text-slate">{k.rif_storico}</span>}
                     </td>
                     <td className="py-1.5 text-right">
                       {[k.sconto1, k.sconto2].filter((s) => s > 0).map((s) => `${s}%`).join(" + ") || (
@@ -100,8 +116,9 @@ async function Scheda({ params }: Props) {
             </table>
           )}
           <p className="mt-3 text-xs text-slate">
-            Sola lettura. I prezzi fissi vengono dall’ultimo netto fatturato; gli sconti in grigio sono ricavati dal listino (≈), quelli ufficiali
-            arriveranno con l’export condizioni NTS.
+            Sola lettura. Le condizioni arrivano da NTS ogni notte: prima lo storico degli ultimi 300 giorni (prezzo speciale se senza sconto e
+            sotto il listino, altrimenti gli stessi sconti sul listino di oggi), poi prezzi personali e sconti registrati in NTS. Gli sconti in
+            grigio (≈) sono ricavati da prezzo fisso e listino.
           </p>
         </section>
       </div>

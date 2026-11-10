@@ -123,7 +123,7 @@ Fermarsi dopo ogni punto e controllare il risultato prima di passare al successi
 | 7 | Solo dopo l'ok: `CLIENTI_ABILITATI=` vuota, riavviare il servizio | Passano gli ordini di tutti i clienti. |
 
 Prima di togliere `CLIENTI_ABILITATI`: creare il login `shop_dav` con `sql\crea_utente_shop_dav.sql`,
-metterlo nel `.env` al posto di `sa` e rilanciare `npm run controlla` (la lettura di `movord` deve risultare negata).
+metterlo nel `.env` al posto di `sa` e rilanciare `npm run controlla` (la lettura di `provvig`, le provvigioni, deve risultare negata).
 
 ## Ricognizione prezzi (una volta, prima dell'import di listino e sconti)
 
@@ -171,6 +171,43 @@ Serve a individuare il mapping prima di costruire la sincronizzazione. Non scriv
 
 Nel file non compaiono mai colonne di costo, margine, provvigione, fido o note interne (filtro sul nome della colonna).
 Compaiono invece anagrafica, documenti e partite dei due clienti di prova: il file resta in azienda.
+
+## Import prezzi da NTS (listino, condizioni, storico)
+
+Porta nello shop i prezzi che il cliente vede in NTS e sul palmare. Su NTS **solo letture**; senza `--scrivi`
+**non tocca Supabase** e scrive solo il rapporto `esplorazione\import-prezzi-AAAAMMGG-hhmmss.txt`.
+
+Regole (decise con l'ufficio il 10/11/2026), per ogni cliente e articolo vince la prima che vale:
+1. **Storico** degli ultimi 300 giorni (ultima riga di ordini, DDT, fatture, come Graphite):
+   senza sconti e sotto il listino di oggi → **prezzo speciale** fisso (es. MOZGIU1 6,90 con listino 9,24);
+   con sconti → **gli stessi sconti sul listino di oggi** (es. OLIGI5 2,28 −15 % → oggi 2,36 −15 % = 2,01);
+   a prezzo pieno → si passa alla regola successiva.
+2. **Prezzo netto personale** valido oggi in NTS (listini per cliente).
+3. **Sconto cliente × articolo** valido oggi in NTS.
+4. Altrimenti **listino del cliente** (anagrafica; 0 = listino 2) con gli sconti di listino, come la funzione Graphite.
+In più gli sconti in anagrafica del cliente diventano uno sconto generale. Listino e prezzo netto sono al centesimo;
+il terzo sconto e oltre si combinano nel secondo (se non sta in 2 decimali la condizione si scarta e il rapporto lo dice).
+
+Prima volta:
+1. Applicare in Supabase la migrazione `supabase/migrations/0010_prezzi_nts.sql` (SQL Editor → Run).
+2. Prova e controllo del rapporto, anche su un cliente noto:
+   ```powershell
+   npm run build
+   npm run importa-prezzi -- --cliente <conto> --articolo <codice>
+   ```
+   Nella sezione 4 del rapporto: listino, storico, scelta e prezzo finale (es. OLIGI5 2,01; MOZGIU1 6,90).
+3. Scrittura:
+   ```powershell
+   npm run importa-prezzi -- --scrivi
+   ```
+4. Ogni notte, con l'Utilità di pianificazione di Windows (PowerShell amministratore, una volta):
+   ```powershell
+   schtasks /Create /TN "ShopDAV Import prezzi" /SC DAILY /ST 05:00 /RU SYSTEM /TR "cmd /c cd /d C:\ShopDav\shop-dav\connettore-nts && npm run importa-prezzi -- --scrivi >> logs\import-prezzi.log 2>&1"
+   ```
+   Durante la scrittura (pochi secondi) le condizioni vengono sostituite: per quell'istante vale il listino.
+
+Con il login `shop_dav` servono anche le letture su `listini`, `sconti`, `movord`, `testmag`, `movmag`
+(già nello script `sql\crea_utente_shop_dav.sql`).
 
 ## Punti aperti
 

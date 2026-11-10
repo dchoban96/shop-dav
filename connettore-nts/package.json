@@ -17,7 +17,8 @@
     "tipi": "tsc -p tsconfig.json --noEmit",
     "esplora-prezzi": "node dist/esplora-prezzi.js",
     "esplora-documenti": "node dist/esplora-documenti.js",
-    "esplora-sconti": "node dist/esplora-sconti.js"
+    "esplora-sconti": "node dist/esplora-sconti.js",
+    "importa-prezzi": "node dist/importa-prezzi.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.119.0",
