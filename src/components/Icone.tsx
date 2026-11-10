@@ -39,3 +39,20 @@ export function IconaCarrello(p: Props) {
     </svg>
   );
 }
+
+export function IconaUtente(p: Props) {
+  return (
+    <svg {...base} {...p}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </svg>
+  );
+}
+
+export function IconaGiu(p: Props) {
+  return (
+    <svg {...base} {...p}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}

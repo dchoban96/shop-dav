@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "./Logo";
 import { Contenitore } from "./Contenitore";
 import { esci } from "@/app/(pubblico)/accedi/azioni";
+import { MenuCliente } from "./MenuCliente";
 
 const voci = [
   { href: "/home", label: "Home" },
@@ -28,14 +29,9 @@ export function HeaderCliente({ codiceCliente, ragioneSociale, demo, nelCarrello
               <Voce key={v.href} {...v} badge={v.href === "/carrello" ? nelCarrello : 0} />
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-4">
-            <span className="hidden max-w-[200px] truncate text-sm text-slate xl:inline" title={ragioneSociale}>
-              {ragioneSociale ?? "Cliente"} <span className="font-semibold text-navy">{codiceCliente}</span>
-            </span>
-            {/* Scadenze e pagamenti: link discreto dal conto del cliente (niente banner altrove) */}
-            <Link href="/pagamenti" className="text-sm font-semibold text-navy underline-offset-4 hover:underline">
-              Pagamenti
-            </Link>
+          <div className="ml-auto flex items-center gap-3">
+            {/* Area personale: ordini, DDT, fatture, pagamenti, statistiche */}
+            <MenuCliente ragioneSociale={ragioneSociale} codiceCliente={codiceCliente} />
             <form action={esci}>
               <button type="submit" className="rounded-md border border-navy px-4 py-2 text-sm font-semibold text-navy hover:bg-ice">
                 Esci
