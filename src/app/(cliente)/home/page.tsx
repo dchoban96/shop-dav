@@ -67,7 +67,7 @@ async function SezioneTuoiArticoli() {
                       type="submit"
                       name="solo"
                       value={v.cod_dav}
-                      className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-viola px-3 text-sm font-semibold text-bianco transition-colors hover:bg-[#5a40a8]"
+                      className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-viola px-3 text-sm font-semibold text-bianco transition-colors hover:bg-viola-scuro"
                       aria-label={`Aggiungi ${v.descrizione} al carrello`}
                     >
                       <IconaCarrello />
@@ -79,7 +79,8 @@ async function SezioneTuoiArticoli() {
             })}
           </ul>
           <div className="mt-4 flex justify-end">
-            <Bottone type="submit" name="tutto" value="1">
+            <Bottone type="submit" name="tutto" value="1" variante="carrello">
+              <IconaCarrello />
               Aggiungi tutto al carrello
             </Bottone>
           </div>

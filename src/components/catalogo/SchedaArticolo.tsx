@@ -8,6 +8,7 @@ import {
   nomeMarchio,
 } from "@/lib/dati/catalogo";
 import { LogoFornitore } from "@/components/LogoFornitore";
+import { IconaAggiorna, IconaAvviso, IconaCarrello, IconaOrologio, IconaVerifica } from "@/components/Icone";
 
 /** Segnaposto foto: fondo ice con il nome della famiglia, mai la foto di un altro prodotto. */
 type Formato = "card" | "grande" | "piccola";
@@ -42,13 +43,19 @@ export function FotoArticolo({ articolo, grande = false, formato }: { articolo: 
   );
 }
 
+/** Etichette di disponibilità come i chip Leany: fondo tenue, testo scuro, icona. */
+const STILE_DISPONIBILITA = {
+  disponibile: { classi: "bg-verde-tenue text-verde-scuro", Icona: IconaVerifica },
+  in_esaurimento: { classi: "bg-rosso-tenue text-rosso", Icona: IconaAvviso },
+  su_ordinazione: { classi: "bg-blu-tenue text-blu-scuro", Icona: IconaOrologio },
+  non_nota: { classi: "bg-ice text-slate", Icona: IconaAggiorna },
+} as const;
+
 export function BadgeDisponibilita({ stato }: { stato: Disponibilita }) {
-  const segno = { disponibile: "●", in_esaurimento: "◐", su_ordinazione: "○", non_nota: "–" }[stato];
+  const { classi, Icona } = STILE_DISPONIBILITA[stato];
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate">
-      <span aria-hidden="true" className="text-azzurro">
-        {segno}
-      </span>
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${classi}`}>
+      <Icona width={14} height={14} />
       {etichettaDisponibilita(stato)}
     </span>
   );
@@ -86,7 +93,7 @@ export function SchedaArticolo({ articolo, stato, prezzo, nota }: Props) {
           {articolo.um ? ` · ${articolo.um}` : ""}
           {articolo.pezzi_confezione ? ` · conf. da ${articolo.pezzi_confezione}` : ""}
         </p>
-        <div className="mt-auto flex items-end justify-between gap-2 pt-1">
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-1">
           <Prezzo valore={prezzo} />
           <BadgeDisponibilita stato={stato} />
         </div>
@@ -106,7 +113,8 @@ export function SchedaArticolo({ articolo, stato, prezzo, nota }: Props) {
             inputMode="numeric"
             className="h-10 w-16 rounded-md border border-azzurro bg-bianco text-center text-base"
           />
-          <button type="submit" className="h-10 flex-1 rounded-md bg-navy px-3 text-sm font-semibold text-bianco hover:bg-[#0d2144]">
+          <button type="submit" className="flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-viola px-3 text-sm font-semibold text-bianco transition-colors hover:bg-viola-scuro">
+            <IconaCarrello />
             Aggiungi
           </button>
         </form>

@@ -8,10 +8,20 @@
   --color-ice: #eef3f7;
   --color-slate: #51627a;
 
-  /* Colori funzionali (solo per azioni: togli, aggiungi, metti nel carrello), tenuti sobri */
-  --color-rosso: #b5443a;
-  --color-verde: #2f8a5b;
-  --color-viola: #6a4fbf;
+  /* Colori funzionali dalla palette Leany (LeanyWebsite, src/styles/global.css): solo azioni e stati.
+     base = pieno (bottoni), scuro = passaggio del mouse e testo su tenue, tenue = fondo delle etichette */
+  --color-rosso: #be1f35;
+  --color-rosso-scuro: #9e1a2c;
+  --color-rosso-tenue: #fbe9ec;
+  --color-verde: #00a652;
+  --color-verde-scuro: #007a3c;
+  --color-verde-tenue: #e6f6ee;
+  --color-viola: #703fd6;
+  --color-viola-scuro: #5b31b3;
+  --color-viola-tenue: #f1ecfc;
+  --color-blu: #0a86e0;
+  --color-blu-scuro: #0668b0;
+  --color-blu-tenue: #e8f3fd;
 
   --font-serif: var(--font-baskerville), Georgia, "Times New Roman", serif;
   --font-sans: var(--font-franklin), system-ui, -apple-system, "Segoe UI", sans-serif;

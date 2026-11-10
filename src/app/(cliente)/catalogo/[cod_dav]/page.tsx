@@ -8,6 +8,7 @@ import { disponibilita, leggiArticolo, nomeMarchio, sogliaEsaurimento } from "@/
 import { aggiungi } from "../../azioni";
 import { Contenitore } from "@/components/Contenitore";
 import { LogoFornitore } from "@/components/LogoFornitore";
+import { IconaCarrello } from "@/components/Icone";
 import { clientePerCodice, MESSAGGIO_SCONTISTICA, prezzoCliente, SCONTO_DA_VERIFICARE } from "@/lib/dati/ordini";
 import { leggiSessione } from "@/lib/sessione";
 
@@ -99,7 +100,8 @@ async function Dettaglio({ params }: Props) {
             inputMode="numeric"
             className="w-24 rounded-md border border-azzurro bg-bianco px-3 py-3 text-center text-base"
           />
-          <Bottone type="submit" className="flex-1">
+          <Bottone type="submit" variante="carrello" className="flex-1">
+            <IconaCarrello />
             Aggiungi al carrello
           </Bottone>
         </form>

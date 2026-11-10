@@ -67,7 +67,7 @@ function RigaCarrello({ riga, scontoDaVerificare = false }: { riga: RigaOrdine; 
           <form action={cambiaQuantita} className="flex items-center gap-2">
             <input type="hidden" name="riga" value={riga.id} />
             <input type="hidden" name="attuale" value={riga.quantita} />
-            <button type="submit" name="azione" value="meno" className={`${bottoneQta} bg-rosso hover:bg-[#9a362e]`} aria-label="Una confezione in meno">
+            <button type="submit" name="azione" value="meno" className={`${bottoneQta} bg-rosso hover:bg-rosso-scuro`} aria-label="Una confezione in meno">
               <IconaMeno />
             </button>
             <label htmlFor={`qta-${riga.id}`} className="sr-only">
@@ -83,7 +83,7 @@ function RigaCarrello({ riga, scontoDaVerificare = false }: { riga: RigaOrdine; 
               inputMode="numeric"
               className="h-10 w-16 rounded-md border border-azzurro bg-bianco text-center text-base"
             />
-            <button type="submit" name="azione" value="piu" className={`${bottoneQta} bg-verde hover:bg-[#25714a]`} aria-label="Una confezione in più">
+            <button type="submit" name="azione" value="piu" className={`${bottoneQta} bg-verde hover:bg-verde-scuro`} aria-label="Una confezione in più">
               <IconaPiu />
             </button>
             <button type="submit" name="azione" value="imposta" className="text-sm font-semibold underline underline-offset-2">

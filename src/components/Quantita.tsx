@@ -31,7 +31,7 @@ export function Quantita({ name, id, iniziale, min = 0, etichetta, um }: Props) 
         type="button"
         onClick={() => cambia(-1)}
         disabled={valore <= min}
-        className={`${tondo} bg-rosso hover:bg-[#9a362e]`}
+        className={`${tondo} bg-rosso hover:bg-rosso-scuro`}
         aria-label={`Una in meno: ${etichetta}`}
       >
         <IconaMeno />
@@ -50,7 +50,7 @@ export function Quantita({ name, id, iniziale, min = 0, etichetta, um }: Props) 
         inputMode="numeric"
         className="h-10 w-14 rounded-md border border-azzurro bg-bianco text-center text-base"
       />
-      <button type="button" onClick={() => cambia(1)} className={`${tondo} bg-verde hover:bg-[#25714a]`} aria-label={`Una in più: ${etichetta}`}>
+      <button type="button" onClick={() => cambia(1)} className={`${tondo} bg-verde hover:bg-verde-scuro`} aria-label={`Una in più: ${etichetta}`}>
         <IconaPiu />
       </button>
       {um && (
