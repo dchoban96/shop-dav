@@ -22,6 +22,8 @@ export type Config = {
   colonnaRiferimentoTestord: string | null;
   usaDataCons: boolean;
   simulaCrashDopoCommit: boolean;
+  /** Ogni quanti minuti il servizio aggiorna la giacenza nello shop (0 = mai). */
+  giacenzeMinuti: number;
 };
 
 export const CARTELLA = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -77,6 +79,7 @@ export function leggiConfig(env: NodeJS.ProcessEnv = process.env): Config {
     colonnaRiferimentoTestord: colonna || null,
     usaDataCons: si(env.USA_DATA_CONS),
     simulaCrashDopoCommit: si(env.SIMULA_CRASH_DOPO_COMMIT),
+    giacenzeMinuti: Number.isFinite(Number(env.GIACENZE_MINUTI ?? 15)) && Number(env.GIACENZE_MINUTI ?? 15) >= 0 ? Number(env.GIACENZE_MINUTI ?? 15) : 15,
   };
 }
 
@@ -86,6 +89,7 @@ export function descriviConfig(c: Config): string {
     `SQL Server ${c.mssql.server}${c.mssql.istanza ? `\\${c.mssql.istanza}` : ""}${c.mssql.porta ? `,${c.mssql.porta}` : ""} come ${c.mssql.utente}`,
     `modalità ${c.prova ? "PROVA (transazione annullata, niente in NTS)" : "REALE"}`,
     `giro ogni ${c.pollSecondi} s`,
+    `giacenze ${c.giacenzeMinuti > 0 ? `ogni ${c.giacenzeMinuti} min` : "spente"}`,
     `clienti abilitati: ${c.clientiAbilitati.length ? c.clientiAbilitati.join(", ") : "tutti"}`,
     `email allarmi: ${c.emailAllarmi}${c.resendApiKey ? "" : " (RESEND_API_KEY vuota: solo registro)"}`,
     `colonna riferimento in testord: ${c.colonnaRiferimentoTestord ?? "non impostata"}`,

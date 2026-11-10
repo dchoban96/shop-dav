@@ -100,6 +100,36 @@ export class Shop {
     return (data ?? []) as RigaEmail[];
   }
 
+  /** Codici di tutti gli articoli dello shop (per la giacenza). */
+  async codiciArticoli(): Promise<string[]> {
+    const out: string[] = [];
+    for (let da = 0; ; da += 1000) {
+      const { data, error } = await this.db.from("articoli").select("cod_dav").order("cod_dav").range(da, da + 999);
+      if (error) throw new Error(`articoli: ${error.message}`);
+      out.push(...(data ?? []).map((r) => r.cod_dav as string));
+      if (!data || data.length < 1000) return out;
+    }
+  }
+
+  /** Giacenze già nello shop, per scrivere solo quelle cambiate. */
+  async giacenzeAttuali(): Promise<Map<string, number>> {
+    const out = new Map<string, number>();
+    for (let da = 0; ; da += 1000) {
+      const { data, error } = await this.db.from("giacenze").select("cod_dav, quantita").order("cod_dav").range(da, da + 999);
+      if (error) throw new Error(`giacenze: ${error.message}`);
+      for (const r of data ?? []) out.set(r.cod_dav as string, Number(r.quantita));
+      if (!data || data.length < 1000) return out;
+    }
+  }
+
+  async scriviGiacenze(righe: { cod_dav: string; quantita: number }[]): Promise<void> {
+    const ora = new Date().toISOString();
+    for (let i = 0; i < righe.length; i += 500) {
+      const { error } = await this.db.from("giacenze").upsert(righe.slice(i, i + 500).map((r) => ({ ...r, aggiornato_il: ora })), { onConflict: "cod_dav" });
+      if (error) throw new Error(`giacenze (lotto ${i}): ${error.message}`);
+    }
+  }
+
   /** Heartbeat letto dal cruscotto dello shop (impostazioni.connettore_nts). */
   async heartbeat(valore: Record<string, unknown>): Promise<void> {
     const { error } = await this.db.from("impostazioni").upsert({ chiave: "connettore_nts", valore });

@@ -19,7 +19,8 @@
     "esplora-documenti": "node dist/esplora-documenti.js",
     "esplora-sconti": "node dist/esplora-sconti.js",
     "importa-prezzi": "node dist/importa-prezzi.js",
-    "esplora-giacenze": "node dist/esplora-giacenze.js"
+    "esplora-giacenze": "node dist/esplora-giacenze.js",
+    "sincronizza-giacenze": "node dist/sincronizza-giacenze.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.119.0",

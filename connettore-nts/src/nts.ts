@@ -221,6 +221,16 @@ export class Nts {
     return m;
   }
 
+  /** Esistenza del magazzino 1 per articolo (artpro), come la vedono gli agenti sul palmare. Solo lettura. */
+  async giacenze(): Promise<{ codart: string; esist: number }[]> {
+    const r = await this.req()
+      .input("ditta", sql.VarChar(12), DITTA)
+      .query<{ codart: string; esist: number }>(
+        `SELECT ap_codart AS codart, SUM(ap_esist) AS esist FROM DAVNTS.dbo.artpro WHERE codditt = @ditta AND ap_magaz = 1 GROUP BY ap_codart`,
+      );
+    return r.recordset.map((x) => ({ codart: String(x.codart), esist: Number(x.esist) }));
+  }
+
   /** Controllo incrociato dopo 'C': l'ordine NTS con quel numero è di questo cliente. */
   async ordineInTestord(anno: number, numero: number, conto: number): Promise<boolean> {
     const r = await this.req()

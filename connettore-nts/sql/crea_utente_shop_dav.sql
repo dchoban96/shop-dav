@@ -33,6 +33,8 @@ GRANT SELECT ON dbo.sconti  TO shop_dav;
 GRANT SELECT ON dbo.movord  TO shop_dav;
 GRANT SELECT ON dbo.testmag TO shop_dav;
 GRANT SELECT ON dbo.movmag  TO shop_dav;
+-- giacenza (servizio ogni 15 minuti, npm run sincronizza-giacenze)
+GRANT SELECT ON dbo.artpro  TO shop_dav;
 GO
 
 /*

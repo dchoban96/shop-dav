@@ -181,6 +181,18 @@ npm run esplora-giacenze -- --articoli OLIGI5,MOZGIU1,DOLMAS
 ```
 Il file finisce in `esplorazione\giacenze-AAAAMMGG-hhmmss.txt`.
 
+## Giacenza nello shop
+
+Il servizio aggiorna la giacenza ogni `GIACENZE_MINUTI` (predefinito 15; 0 = mai), solo se SQL Server risponde.
+Regole (10/11/2026): **esistenza piena del magazzino 1** (`artpro`), come sul palmare degli agenti; gli articoli
+dello shop senza progressivi valgono 0. Nello shop il cliente vede solo "disponibile" o "su ordinazione", mai la
+quantità; "in esaurimento" per ora è spento (Impostazioni dell'area ufficio → soglia **0**). Su Supabase si
+scrivono solo le giacenze cambiate. A mano (senza `--scrivi` è una prova e non tocca Supabase):
+```powershell
+npm run sincronizza-giacenze
+npm run sincronizza-giacenze -- --scrivi
+```
+
 ## Import prezzi da NTS (listino, condizioni, storico)
 
 Porta nello shop i prezzi che il cliente vede in NTS e sul palmare. Su NTS **solo letture**; senza `--scrivi`

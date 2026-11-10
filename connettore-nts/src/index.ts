@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { CARTELLA, descriviConfig, leggiConfig, VERSIONE } from "./config.js";
 import { inviaAllarme } from "./email.js";
 import { Connettore } from "./giro.js";
+import { SincronizzaGiacenze } from "./giacenze.js";
 import { Nts } from "./nts.js";
 import { attivaFileRegistro, messaggio, registro } from "./registro.js";
 import { Shop } from "./shop.js";
@@ -19,7 +20,10 @@ async function main() {
   registro.info(`Connettore Shop DAV → NTS ${VERSIONE} · ${descriviConfig(cfg)}`);
 
   const nts = new Nts(cfg);
-  const connettore = new Connettore(cfg, nts, new Shop(cfg), (oggetto, testo) => inviaAllarme(cfg, oggetto, testo));
+  const shop = new Shop(cfg);
+  const connettore = new Connettore(cfg, nts, shop, (oggetto, testo) => inviaAllarme(cfg, oggetto, testo));
+  // Giacenza del magazzino 1 nello shop ogni GIACENZE_MINUTI (solo letture su NTS, solo differenze su Supabase).
+  const giacenze = new SincronizzaGiacenze(cfg.giacenzeMinuti, () => nts.giacenze(), shop);
 
   let fermo = false;
   let sveglia: (() => void) | null = null;
@@ -34,7 +38,8 @@ async function main() {
   process.on("SIGBREAK", () => ferma("SIGBREAK"));
 
   do {
-    await connettore.giro();
+    const { sqlOk } = await connettore.giro();
+    if (sqlOk) await giacenze.forse();
     if (unaVolta || fermo) break;
     await new Promise<void>((ok) => {
       const t = setTimeout(ok, cfg.pollSecondi * 1000);

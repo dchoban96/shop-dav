@@ -24,6 +24,7 @@ const cfgBase: Config = {
   colonnaRiferimentoTestord: null,
   usaDataCons: false,
   simulaCrashDopoCommit: false,
+  giacenzeMinuti: 0,
 };
 
 type OrdineFinto = { o: OrdineShop; stato: StatoNts; idFrontiera: number | null; numeroNts: number | null; inInvioIl: number; inFrontieraIl: number | null; provaOk: boolean };
