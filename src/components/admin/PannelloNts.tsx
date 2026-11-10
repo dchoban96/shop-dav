@@ -31,7 +31,8 @@ export async function PannelloNts() {
         {s ? (
           <p className={`mt-1 ${allarme ? "" : "text-slate"}`}>
             Ultimo giro {quando(s.ultimo_giro)} · modalità <strong>{s.modalita}</strong>
-            {s.clienti_abilitati ? ` · solo clienti ${s.clienti_abilitati}` : ""}
+            {s.clienti_abilitati ? ` · solo clienti ${s.clienti_abilitati}` : " · tutti i clienti"}
+            {s.clienti_da === "shop" ? " (da Impostazioni)" : s.clienti_da === ".env" ? " (dal file .env)" : ""}
             {s.ultimo_errore ? ` · ${s.ultimo_errore}` : ""}
           </p>
         ) : (

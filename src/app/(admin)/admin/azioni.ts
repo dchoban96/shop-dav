@@ -25,10 +25,21 @@ export async function aggiornaImpostazioni(formData: FormData): Promise<void> {
   await richiediAdmin();
   const soglia = Number(String(formData.get("soglia_esaurimento") ?? "").replace(",", "."));
   const email = String(formData.get("email_ordini") ?? "").trim();
-  if (!(soglia >= 0 && soglia <= 1000) || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+  // Clienti mandati a NTS in automatico: tutti, oppure solo i codici NTS elencati (virgole, spazi o a capo)
+  const tutti = formData.get("clienti_nts") !== "solo";
+  const codici = [...new Set(String(formData.get("codici_nts") ?? "").split(/[\s,;]+/).filter(Boolean))];
+  if (
+    !(soglia >= 0 && soglia <= 1000) ||
+    !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ||
+    (!tutti && (codici.length === 0 || codici.some((c) => !/^\d{1,10}$/.test(c))))
+  ) {
     redirect("/admin/impostazioni?errore=1");
   }
-  await salvaImpostazioni({ soglia_esaurimento: soglia, email_ordini: email });
+  await salvaImpostazioni({
+    soglia_esaurimento: soglia,
+    email_ordini: email,
+    clienti_nts: tutti ? { tutti: true } : { tutti: false, codici },
+  });
   refresh();
   redirect("/admin/impostazioni?salvato=1");
 }

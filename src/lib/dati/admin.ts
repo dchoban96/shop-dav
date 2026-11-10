@@ -195,16 +195,30 @@ export async function schedaCliente(id: number): Promise<SchedaCliente | null> {
 
 // Impostazioni ------------------------------------------------------------------
 
-export type Impostazioni = { soglia_esaurimento: number; email_ordini: string };
+/**
+ * Clienti i cui ordini il connettore manda a NTS da solo (lo rilegge a ogni giro).
+ * Chiave impostazioni.nts_clienti_abilitati: {"tutti": true} o {"tutti": false, "codici": [...]};
+ * se manca vale CLIENTI_ABILITATI nel .env del connettore.
+ */
+export const CHIAVE_CLIENTI_NTS = "nts_clienti_abilitati";
+export type ClientiNts = { tutti: true } | { tutti: false; codici: string[] };
+
+export type Impostazioni = { soglia_esaurimento: number; email_ordini: string; clienti_nts: ClientiNts | null };
 
 export async function leggiImpostazioni(): Promise<Impostazioni> {
-  const { data, error } = await supabaseAdmin().from("impostazioni").select("chiave, valore").in("chiave", ["soglia_esaurimento", "email_ordini"]);
+  const { data, error } = await supabaseAdmin()
+    .from("impostazioni")
+    .select("chiave, valore")
+    .in("chiave", ["soglia_esaurimento", "email_ordini", CHIAVE_CLIENTI_NTS]);
   if (error) throw new Error(`leggiImpostazioni: ${error.message}`);
   const m = new Map((data ?? []).map((r) => [r.chiave as string, r.valore as unknown]));
   const soglia = Number(m.get("soglia_esaurimento"));
+  const c = m.get(CHIAVE_CLIENTI_NTS) as { tutti?: unknown; codici?: unknown } | undefined;
   return {
     soglia_esaurimento: Number.isFinite(soglia) ? soglia : 2,
     email_ordini: typeof m.get("email_ordini") === "string" ? (m.get("email_ordini") as string) : "info@davsnc.it",
+    clienti_nts:
+      c?.tutti === true ? { tutti: true } : c?.tutti === false && Array.isArray(c.codici) ? { tutti: false, codici: c.codici.map(String) } : null,
   };
 }
 
@@ -214,6 +228,7 @@ export async function salvaImpostazioni(v: Impostazioni): Promise<void> {
     .upsert([
       { chiave: "soglia_esaurimento", valore: v.soglia_esaurimento },
       { chiave: "email_ordini", valore: v.email_ordini },
+      ...(v.clienti_nts ? [{ chiave: CHIAVE_CLIENTI_NTS, valore: v.clienti_nts }] : []),
     ]);
   if (error) throw new Error(`salvaImpostazioni: ${error.message}`);
 }

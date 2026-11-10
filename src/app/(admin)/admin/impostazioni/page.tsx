@@ -21,7 +21,8 @@ async function Modulo({ searchParams }: Props) {
       )}
       {errore && (
         <p role="alert" className="rounded-md border border-navy bg-ice px-4 py-3 text-sm">
-          Controlla i valori: la soglia va da 0 a 1000 e l’email deve essere valida.
+          Controlla i valori: la soglia va da 0 a 1000, l’email deve essere valida e, se scegli “solo questi clienti”, servono uno o più
+          codici NTS (solo numeri).
         </p>
       )}
       <div>
@@ -40,6 +41,29 @@ async function Modulo({ searchParams }: Props) {
         <input id="email_ordini" name="email_ordini" type="email" required defaultValue={imp.email_ordini} className={campo} />
         <p className="mt-1 text-xs text-slate">Ogni ordine confermato arriva qui, con copia al cliente se ha un’email.</p>
       </div>
+      <fieldset>
+        <legend className="etichetta block">Ordini mandati a NTS in automatico</legend>
+        <label className="mt-2 flex items-center gap-2 text-base">
+          <input type="radio" name="clienti_nts" value="tutti" defaultChecked={imp.clienti_nts?.tutti !== false} />
+          Tutti i clienti
+        </label>
+        <label className="mt-2 flex items-center gap-2 text-base">
+          <input type="radio" name="clienti_nts" value="solo" defaultChecked={imp.clienti_nts?.tutti === false} />
+          Solo questi clienti (codice NTS)
+        </label>
+        <textarea
+          name="codici_nts"
+          aria-label="Codici NTS dei clienti abilitati"
+          rows={2}
+          defaultValue={imp.clienti_nts?.tutti === false ? imp.clienti_nts.codici.join(", ") : ""}
+          placeholder="es. 140100001, 140100002"
+          className={campo}
+        />
+        <p className="mt-1 text-xs text-slate">
+          Il connettore lo rilegge a ogni giro (30 s). Gli ordini degli altri clienti vanno in errore con email: l’ufficio li inserisce a mano in NTS.
+          {imp.clienti_nts === null && " Finché non salvi qui vale l’elenco nel file .env del connettore."}
+        </p>
+      </fieldset>
       <Bottone type="submit">Salva</Bottone>
     </form>
   );

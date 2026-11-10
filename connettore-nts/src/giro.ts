@@ -37,6 +37,8 @@ export interface PortaShop {
   inAttesaDiEsito(): Promise<OrdineInCorso[]>;
   righePerEmail(ordineId: number): Promise<{ cod_dav: string; descrizione: string; quantita: string | number; um: string | null; note: string | null }[]>;
   heartbeat(valore: Record<string, unknown>): Promise<void>;
+  /** Clienti scelti in Impostazioni dello shop: [] = tutti, null = non impostati (vale il .env). */
+  clientiAbilitati(): Promise<string[] | null>;
 }
 
 export type Allarme = (oggetto: string, testo: string) => Promise<unknown>;
@@ -54,6 +56,9 @@ export const TEMPI = {
 export class Connettore {
   private sqlGiuDal: number | null = null;
   private ultimoAllarmeSql = 0;
+  /** Clienti che passano in automatico: dalle Impostazioni dello shop, riletti a ogni giro; altrimenti dal .env. */
+  private abilitati: string[];
+  private abilitatiDa: "shop" | ".env" = ".env";
   /** Chiamata dopo il COMMIT quando SIMULA_CRASH_DOPO_COMMIT è attivo (piano di prova, punto 5). */
   crash: () => never = () => process.exit(3);
 
@@ -63,7 +68,9 @@ export class Connettore {
     private shop: PortaShop,
     private allarme: Allarme,
     private adesso: () => number = Date.now,
-  ) {}
+  ) {
+    this.abilitati = cfg.clientiAbilitati;
+  }
 
   /** Un giro completo. Non lancia eccezioni: gli errori finiscono nel registro e nell'heartbeat. */
   async giro(): Promise<{ sqlOk: boolean; errore: string | null }> {
@@ -101,7 +108,8 @@ export class Connettore {
         sql_ok: sqlOk,
         ultimo_errore: errore,
         versione: VERSIONE,
-        clienti_abilitati: this.cfg.clientiAbilitati.length ? this.cfg.clientiAbilitati.join(", ") : null,
+        clienti_abilitati: this.abilitati.length ? this.abilitati.join(", ") : null,
+        clienti_da: this.abilitatiDa,
       });
     } catch (e) {
       registro.errore("heartbeat non scritto (Supabase irraggiungibile?)", e);
@@ -143,16 +151,28 @@ export class Connettore {
 
   // 2-4. Claim, controlli, scrittura ---------------------------------------------------
   async invio(): Promise<void> {
+    await this.aggiornaAbilitati();
     const ordini = await this.shop.claim(TEMPI.ordiniPerGiro, this.cfg.prova);
     for (const o of ordini) await this.inviaUno(o);
+  }
+
+  /** Se la lettura non riesce, invio() si ferma prima del claim: nessun ordine parte con la lista sbagliata. */
+  private async aggiornaAbilitati(): Promise<void> {
+    const dalloShop = await this.shop.clientiAbilitati();
+    const prima = this.abilitati.join(",") + this.abilitatiDa;
+    this.abilitati = dalloShop ?? this.cfg.clientiAbilitati;
+    this.abilitatiDa = dalloShop ? "shop" : ".env";
+    if (this.abilitati.join(",") + this.abilitatiDa !== prima) {
+      registro.info(`clienti abilitati (${this.abilitatiDa}): ${this.abilitati.length ? this.abilitati.join(", ") : "tutti"}`);
+    }
   }
 
   async inviaUno(o: OrdineShop): Promise<void> {
     const rif = o.riferimento_nts ?? `ordine ${o.numero}`;
     try {
-      if (!clienteAbilitato(o.cliente.codice_nts, this.cfg.clientiAbilitati)) {
+      if (!clienteAbilitato(o.cliente.codice_nts, this.abilitati)) {
         throw new ErroreOrdine(
-          `Cliente ${o.cliente.codice_nts} non abilitato all'invio automatico (CLIENTI_ABILITATI, fase di prova): inserire l'ordine a mano in NTS e segnarlo "inserito a mano"`,
+          `Cliente ${o.cliente.codice_nts} non abilitato all'invio automatico (${this.abilitatiDa === "shop" ? "Impostazioni dello shop" : "CLIENTI_ABILITATI"}, fase di prova): inserire l'ordine a mano in NTS e segnarlo "inserito a mano"`,
         );
       }
 

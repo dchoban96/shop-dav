@@ -118,6 +118,22 @@ export function clienteAbilitato(codice: string, abilitati: string[]): boolean {
   return abilitati.length === 0 || abilitati.includes(String(codice).trim());
 }
 
+/** Chiave in impostazioni con i clienti scelti dall'ufficio nello shop (Impostazioni). */
+export const CHIAVE_CLIENTI_NTS = "nts_clienti_abilitati";
+
+/**
+ * Valore di impostazioni.nts_clienti_abilitati: {"tutti": true} oppure {"tutti": false, "codici": [...]}.
+ * [] = tutti i clienti; null = mai salvato o non valido → vale CLIENTI_ABILITATI del .env.
+ */
+export function clientiDaImpostazione(v: unknown): string[] | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as { tutti?: unknown; codici?: unknown };
+  if (o.tutti === true) return [];
+  if (o.tutti !== false || !Array.isArray(o.codici)) return null;
+  const codici = o.codici.map((c) => String(c ?? "").trim()).filter(Boolean);
+  return codici.length ? codici : null;
+}
+
 /** Data (anno, mese, giorno) di un istante nel fuso di Roma. */
 export function dataRoma(iso: string): { anno: number; mese: number; giorno: number } {
   const t = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));

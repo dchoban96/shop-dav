@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { annoOrdine, controllaDecimale, contoNts, ErroreOrdine, noteTestata, preparaOrdine, type OrdineShop } from "./regole.js";
+import { annoOrdine, clientiDaImpostazione, controllaDecimale, contoNts, ErroreOrdine, noteTestata, preparaOrdine, type OrdineShop } from "./regole.js";
 import { articoli, colRiga, colTestata, ordineProva } from "./test/dati.js";
 
 const ctx = { colTestata, colRiga, articoli, usaDataCons: false };
@@ -113,4 +113,12 @@ test("sconto oltre il 20 %: avviso CONTROLLARE SCONTISTICA in testa alle note (m
   assert.doesNotMatch(con({ prezzo_accordato: "1.0000", sconto1: "60" }).note, /CONTROLLARE/, "prezzo speciale: niente avviso");
   const lungo = preparaOrdine(ordineProva({ note: "x".repeat(300), righe: [{ ...riga, note: null, sconto1: "40", sconto2: "0" }] }), ctx);
   assert.ok(lungo.note.startsWith("CONTROLLARE SCONTISTICA: DOLFOR -40%") && lungo.note.length === 200, "l'avviso resta anche se la nota va troncata");
+});
+
+test("clienti abilitati dalle Impostazioni dello shop", () => {
+  assert.deepEqual(clientiDaImpostazione({ tutti: true }), []);
+  assert.deepEqual(clientiDaImpostazione({ tutti: false, codici: [" 140199999 ", "", 140100001] }), ["140199999", "140100001"]);
+  assert.equal(clientiDaImpostazione(undefined), null, "mai salvato: vale il .env");
+  assert.equal(clientiDaImpostazione({ tutti: false, codici: [] }), null);
+  assert.equal(clientiDaImpostazione("tutti"), null);
 });

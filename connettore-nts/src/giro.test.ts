@@ -33,6 +33,8 @@ class ShopFinto implements PortaShop {
   ordini = new Map<number, OrdineFinto>();
   registro: { id: number; evento: string; dettaglio: string }[] = [];
   battiti: Record<string, unknown>[] = [];
+  /** Impostazioni dello shop: null = non salvate. */
+  abilitatiShop: string[] | null = null;
   constructor(private ora: () => number) {}
   aggiungi(o: OrdineShop) {
     this.ordini.set(o.id, { o, stato: "da_inviare", idFrontiera: null, numeroNts: null, inInvioIl: 0, inFrontieraIl: null, provaOk: false });
@@ -84,6 +86,9 @@ class ShopFinto implements PortaShop {
   }
   async heartbeat(v: Record<string, unknown>) {
     this.battiti.push(v);
+  }
+  async clientiAbilitati() {
+    return this.abilitatiShop;
   }
 }
 function shopFinto(ora: () => number): ShopFinto {
@@ -207,6 +212,36 @@ test("cliente non abilitato → errore con email, niente in frontiera", async ()
   assert.equal(nts.scritture.length, 0);
   assert.equal(shop.ordini.get(1)!.stato, "errore");
   assert.equal(email.length, 1);
+});
+
+test("Impostazioni dello shop: 'tutti' vince sul .env, riletto a ogni giro", async () => {
+  const { shop, nts, c } = ambiente();
+  nts.clienti.add(140100001);
+  shop.abilitatiShop = [];
+  shop.aggiungi(ordineProva({ cliente: { id: 1, codice_nts: "140100001", ragione_sociale: "Altro" } }));
+  await c.giro();
+  assert.equal(nts.scritture.length, 1);
+  assert.equal(shop.ordini.get(1)!.stato, "in_frontiera");
+  assert.equal(shop.battiti.at(-1)!.clienti_abilitati, null);
+  assert.equal(shop.battiti.at(-1)!.clienti_da, "shop");
+
+  shop.abilitatiShop = ["140199999"];
+  shop.aggiungi(ordineProva({ id: 2, numero: 124, riferimento_nts: "SHOP-000124", cliente: { id: 1, codice_nts: "140100001", ragione_sociale: "Altro" } }));
+  await c.giro();
+  assert.equal(shop.ordini.get(2)!.stato, "errore");
+  assert.match(shop.registro.find((r) => r.id === 2)!.dettaglio, /Impostazioni dello shop/);
+});
+
+test("lettura delle Impostazioni non riuscita: nessun claim", async () => {
+  const { shop, nts, c } = ambiente();
+  shop.clientiAbilitati = async () => {
+    throw new Error("Supabase giù");
+  };
+  shop.aggiungi(ordineProva());
+  const r = await c.giro();
+  assert.match(r.errore ?? "", /invio: Supabase giù/);
+  assert.equal(shop.ordini.get(1)!.stato, "da_inviare");
+  assert.equal(nts.scritture.length, 0);
 });
 
 test("5. crash dopo il COMMIT: il recupero trova il riferimento e non reinvia", async () => {

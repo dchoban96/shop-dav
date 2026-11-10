@@ -120,9 +120,12 @@ Fermarsi dopo ogni punto e controllare il risultato prima di passare al successi
 | 4 | Ordine con un articolo o un cliente che non esiste in NTS | "Errore" con email all'ufficio, niente scritto in frontiera. |
 | 5 | `SIMULA_CRASH_DOPO_COMMIT=si`, nuovo ordine, `npm run una-volta` (esce dopo il COMMIT). Poi `SIMULA_CRASH_DOPO_COMMIT=no`, attendere 2 minuti, `npm run una-volta` | Il recupero trova il riferimento in frontiera: "In frontiera" / "In NTS", nessun secondo invio. |
 | 6 | `MSSQL_SERVER` sbagliato (o rete staccata), servizio acceso per più di 5 minuti | L'ordine resta "Da inviare", heartbeat con SQL non raggiungibile, email di allarme dopo 5 minuti. Rimessa la configurazione giusta, l'ordine parte. Poi fermare il servizio per più di 5 minuti: arriva l'email "Connettore NTS fermo" mandata da Supabase e il cruscotto diventa rosso. |
-| 7 | Solo dopo l'ok: `CLIENTI_ABILITATI=` vuota, riavviare il servizio | Passano gli ordini di tutti i clienti. |
+| 7 | Solo dopo l'ok: nello shop, Impostazioni → "Ordini mandati a NTS in automatico" → **Tutti i clienti** (oppure `CLIENTI_ABILITATI=` vuota e riavvio del servizio) | Passano gli ordini di tutti i clienti. Il cruscotto mostra "tutti i clienti (da Impostazioni)". |
 
-Prima di togliere `CLIENTI_ABILITATI`: creare il login `shop_dav` con `sql\crea_utente_shop_dav.sql`,
+I clienti abilitati si scelgono anche dallo shop (Impostazioni): il connettore li rilegge a ogni giro e,
+una volta salvati lì, `CLIENTI_ABILITATI` del `.env` non conta più. Se lo shop non risponde, in quel giro non parte nessun ordine.
+
+Prima di abilitare tutti i clienti: creare il login `shop_dav` con `sql\crea_utente_shop_dav.sql`,
 metterlo nel `.env` al posto di `sa` e rilanciare `npm run controlla` (la lettura di `provvig`, le provvigioni, deve risultare negata).
 
 ## Ricognizione prezzi (una volta, prima dell'import di listino e sconti)

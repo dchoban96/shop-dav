@@ -5,7 +5,7 @@
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Config } from "./config.js";
-import type { OrdineShop } from "./regole.js";
+import { CHIAVE_CLIENTI_NTS, clientiDaImpostazione, type OrdineShop } from "./regole.js";
 
 export type StatoNts = "da_inviare" | "in_invio" | "in_frontiera" | "in_nts" | "da_verificare" | "errore" | "manuale";
 
@@ -128,6 +128,13 @@ export class Shop {
       const { error } = await this.db.from("giacenze").upsert(righe.slice(i, i + 500).map((r) => ({ ...r, aggiornato_il: ora })), { onConflict: "cod_dav" });
       if (error) throw new Error(`giacenze (lotto ${i}): ${error.message}`);
     }
+  }
+
+  /** Clienti abilitati scelti nello shop: [] = tutti, null = mai salvati (vale il .env). */
+  async clientiAbilitati(): Promise<string[] | null> {
+    const { data, error } = await this.db.from("impostazioni").select("valore").eq("chiave", CHIAVE_CLIENTI_NTS).maybeSingle();
+    if (error) throw new Error(`clienti abilitati: ${error.message}`);
+    return clientiDaImpostazione(data?.valore);
   }
 
   /** Heartbeat letto dal cruscotto dello shop (impostazioni.connettore_nts). */

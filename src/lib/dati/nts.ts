@@ -31,6 +31,8 @@ export type StatoConnettore = {
   ultimo_errore: string | null;
   versione: string | null;
   clienti_abilitati: string | null;
+  /** Da dove li prende il connettore: "shop" (Impostazioni) o ".env". */
+  clienti_da: string | null;
 };
 
 /** Ultimo avviso "connettore fermo" del job in Supabase (impostazioni.connettore_nts_allarme). */
@@ -56,6 +58,7 @@ export async function leggiConnettore(): Promise<Connettore> {
       ultimo_errore: v.ultimo_errore ?? null,
       versione: v.versione ?? null,
       clienti_abilitati: v.clienti_abilitati ?? null,
+      clienti_da: v.clienti_da ?? null,
     },
     fermo: minuti >= MINUTI_SILENZIO,
     minuti,
