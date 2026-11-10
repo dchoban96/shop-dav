@@ -31,16 +31,39 @@ test("DATA_CONS solo se richiesta", () => {
   assert.equal(p.dataCons?.getMonth(), 10);
 });
 
-test("decimali: zeri finali ignorati, troppi decimali è errore (niente arrotondamenti)", () => {
+test("decimali: zeri finali ignorati, troppi decimali è errore per quantità e sconti", () => {
   const c = colRiga.get("PREZZO");
   assert.equal(controllaDecimale("5.2600", c, "p"), 5.26);
   assert.throws(() => controllaDecimale("5.26001", c, "p"), ErroreOrdine);
   assert.throws(() => controllaDecimale("abc", c, "p"), ErroreOrdine);
   assert.throws(() => controllaDecimale("12345678901234567", c, "p"), ErroreOrdine);
-  const due = { nome: "PREZZO", tipo: "decimal", precisione: 18, scala: 2, lunghezza: 0 };
-  const quattro = ordineProva({ righe: [{ ...ordineProva().righe[0], prezzo_listino: "5.2650" }] });
-  assert.throws(() => preparaOrdine(quattro, { ...ctx, colRiga: new Map([...colRiga, ["PREZZO", due]]) }), /più di 2 decimali/);
-  assert.doesNotThrow(() => preparaOrdine(ordineProva(), { ...ctx, colRiga: new Map([...colRiga, ["PREZZO", due]]) }));
+  const due = (nome: string) => ({ nome, tipo: "decimal", precisione: 11, scala: 2, lunghezza: 0 });
+  const conSconto = ordineProva({ righe: [{ ...ordineProva().righe[0], sconto1: "10.125" }] });
+  assert.throws(() => preparaOrdine(conSconto, { ...ctx, colRiga: new Map([...colRiga, ["SCONTO1", due("SCONTO1")]]) }), /più di 2 decimali/);
+});
+
+test("arrotondamento al decimale più vicino, sulle cifre", async () => {
+  const { arrotondaDecimale } = await import("./regole.js");
+  assert.equal(arrotondaDecimale("38.488", 2), "38.49");
+  assert.equal(arrotondaDecimale("0.041", 2), "0.04");
+  assert.equal(arrotondaDecimale("2.365", 2), "2.37");
+  assert.equal(arrotondaDecimale("2.364999", 2), "2.36");
+  assert.equal(arrotondaDecimale("9.995", 2), "10.00");
+  assert.equal(arrotondaDecimale("1.555000", 2), "1.56");
+  assert.equal(arrotondaDecimale("2.36", 2), "2.36");
+  assert.equal(arrotondaDecimale("-0.004", 2), "0.00");
+});
+
+test("prezzo con più decimali della frontiera: arrotondato al centesimo e annotato", () => {
+  const frontiera = new Map([...colRiga, ["PREZZO", { nome: "PREZZO", tipo: "decimal", precisione: 11, scala: 2, lunghezza: 0 }]]);
+  const riga = (prezzo_listino: string) => ordineProva({ righe: [{ ...ordineProva().righe[0], prezzo_listino, note: null }] });
+  const p = preparaOrdine(riga("38.4880"), { ...ctx, colRiga: frontiera });
+  assert.equal(p.righe[0].tipo === "articolo" && p.righe[0].prezzo, 38.49);
+  assert.deepEqual(p.avvisi, ["Prezzo di DOLFOR arrotondato da 38.488 a 38.49 (la frontiera accetta 2 decimali)"]);
+  const esatto = preparaOrdine(riga("2.3600"), { ...ctx, colRiga: frontiera });
+  assert.equal(esatto.righe[0].tipo === "articolo" && esatto.righe[0].prezzo, 2.36);
+  assert.deepEqual(esatto.avvisi, [], "nessun avviso se il prezzo sta già nei decimali");
+  assert.throws(() => preparaOrdine(riga("0.0040"), { ...ctx, colRiga: frontiera }), /prezzo zero/);
 });
 
 test("controlli che mandano l'ordine in errore", () => {

@@ -66,9 +66,25 @@ export function lunghezzaMax(c: Colonna | undefined): number | null {
 }
 
 /**
+ * Arrotonda un numero scritto come testo ("38.488") a `scala` decimali, al valore più vicino
+ * (la metà va verso l'alto in valore assoluto, come SQL Server). Lavora sulle cifre, senza virgola mobile.
+ */
+export function arrotondaDecimale(t: string, scala: number): string {
+  const testo = t.trim();
+  const negativo = testo.startsWith("-");
+  const [intero, dec = ""] = testo.replace(/^-/, "").split(".");
+  if (dec.length <= scala) return testo;
+  const tenuto = BigInt((intero || "0") + dec.slice(0, scala));
+  const v = tenuto + (Number(dec[scala]) >= 5 ? 1n : 0n);
+  const cifre = v.toString().padStart(scala + 1, "0");
+  const risultato = scala > 0 ? `${cifre.slice(0, -scala)}.${cifre.slice(-scala)}` : cifre;
+  return (negativo && v !== 0n ? "-" : "") + risultato;
+}
+
+/**
  * Numero esatto (testo da Postgres, es. "5.2600") controllato contro la colonna SQL Server.
- * Gli zeri finali non contano; se servono più decimali di quelli della colonna è un errore:
- * niente arrotondamenti silenziosi.
+ * Gli zeri finali non contano; se servono più decimali di quelli della colonna è un errore.
+ * Il prezzo viene arrotondato prima (vedi preparaOrdine); quantità e sconti no.
  */
 export function controllaDecimale(testo: string | null, col: Colonna | undefined, cosa: string): number {
   const t = String(testo ?? "").trim();
@@ -207,7 +223,18 @@ export function preparaOrdine(o: OrdineShop, ctx: Contesto): OrdinePreparato {
       s1T = r.sconto1 ?? "0";
       s2T = r.sconto2 ?? "0";
     }
-    const prezzo = controllaDecimale(prezzoT, ctx.colRiga.get("PREZZO"), `Prezzo di ${cod}`);
+    // Il listino NTS ha fino a 6 decimali, la frontiera ne accetta meno (PREZZO decimal(11,2)):
+    // il prezzo si arrotonda al centesimo più vicino (decisione del 10/11/2026) e l'arrotondamento resta nel registro.
+    const colPrezzo = ctx.colRiga.get("PREZZO");
+    let prezzoInviato = String(prezzoT ?? "").trim();
+    if (colPrezzo && NUMERICI.has(colPrezzo.tipo) && /^-?\d+(\.\d+)?$/.test(prezzoInviato)) {
+      const arrotondato = arrotondaDecimale(prezzoInviato, colPrezzo.scala);
+      if (Number(arrotondato) !== Number(prezzoInviato)) {
+        avvisi.push(`Prezzo di ${cod} arrotondato da ${Number(prezzoInviato)} a ${arrotondato} (la frontiera accetta ${colPrezzo.scala} decimali)`);
+      }
+      prezzoInviato = arrotondato;
+    }
+    const prezzo = controllaDecimale(prezzoInviato, colPrezzo, `Prezzo di ${cod}`);
     if (prezzo < 0) throw new ErroreOrdine(`Articolo ${cod}: prezzo negativo`);
     if (prezzo === 0) throw new ErroreOrdine(`Articolo ${cod}: prezzo zero (NTS metterebbe il listino senza le condizioni del cliente)`);
     const sconto1 = controllaDecimale(s1T, ctx.colRiga.get("SCONTO1"), `Sconto 1 di ${cod}`);

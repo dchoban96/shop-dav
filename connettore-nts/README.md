@@ -56,7 +56,8 @@ Connettore (ogni 30 s)      ──► controlli ──► frontiera NTS ──�
    npm run controlla
    ```
    Deve finire con "Tutti i controlli superati". Mostra anche tipo, precisione e scala reali delle colonne
-   di frontiera: il connettore le usa per non arrotondare mai prezzi o sconti in silenzio.
+   di frontiera: il connettore le usa per arrotondare il prezzo al centesimo più vicino (annotato nel registro
+   dell'ordine) e per non arrotondare mai quantità e sconti.
 5. Un giro a mano, guardando cosa succede:
    ```powershell
    npm run una-volta
@@ -185,7 +186,9 @@ Compaiono invece anagrafica, documenti e partite dei due clienti di prova: il fi
 
 - In `NTS_FRONTIERA` solo `SELECT` e `INSERT`; in `DAVNTS` solo letture su `anagra`, `artico`, `testord`. Mai `UPDATE` o `DELETE`.
 - Non usa le tabelle `GPH2_*` né il servizio Graphite: le righe dei palmari degli agenti non vengono mai toccate.
-- Manda sempre prezzo e sconti dello shop: mai `PREZZO = 0`. Un prezzo con più decimali di quelli accettati da NTS manda l'ordine in errore.
+- Manda sempre prezzo e sconti dello shop: mai `PREZZO = 0`. Il prezzo si arrotonda al centesimo più vicino se ha più decimali di quelli accettati dalla frontiera
+  (il listino NTS ne ha fino a 3; decisione del 10/11/2026) e l'arrotondamento resta nel registro dell'ordine;
+  quantità o sconti con troppi decimali mandano invece l'ordine in errore.
 - Prima di ogni scrittura cerca il riferimento in frontiera: un ordine non entra mai due volte.
 - Query sempre parametrizzate; password e chiavi solo nel `.env`; nel registro solo codice cliente e riferimento.
 
