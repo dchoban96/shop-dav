@@ -172,6 +172,15 @@ Serve a individuare il mapping prima di costruire la sincronizzazione. Non scriv
 Nel file non compaiono mai colonne di costo, margine, provvigione, fido o note interne (filtro sul nome della colonna).
 Compaiono invece anagrafica, documenti e partite dei due clienti di prova: il file resta in azienda.
 
+## Ricognizione giacenze (una volta, prima dell'import della giacenza)
+
+Solo letture su DAVNTS: come calcola la giacenza Graphite (GPH_GIACENZE_UNI, progressivi articolo, procedura
+dei palmari), magazzini, tabelle dei progressivi con i totali per magazzino e alcuni articoli di prova.
+```powershell
+npm run esplora-giacenze -- --articoli OLIGI5,MOZGIU1,DOLMAS
+```
+Il file finisce in `esplorazione\giacenze-AAAAMMGG-hhmmss.txt`.
+
 ## Import prezzi da NTS (listino, condizioni, storico)
 
 Porta nello shop i prezzi che il cliente vede in NTS e sul palmare. Su NTS **solo letture**; senza `--scrivi`
