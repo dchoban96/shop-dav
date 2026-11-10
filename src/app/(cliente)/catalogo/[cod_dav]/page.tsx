@@ -8,7 +8,7 @@ import { disponibilita, leggiArticolo, nomeMarchio, sogliaEsaurimento } from "@/
 import { aggiungi } from "../../azioni";
 import { Contenitore } from "@/components/Contenitore";
 import { LogoFornitore } from "@/components/LogoFornitore";
-import { clientePerCodice, prezzoCliente } from "@/lib/dati/ordini";
+import { clientePerCodice, MESSAGGIO_SCONTISTICA, prezzoCliente, SCONTO_DA_VERIFICARE } from "@/lib/dati/ordini";
 import { leggiSessione } from "@/lib/sessione";
 
 export const metadata: Metadata = { title: "Articolo" };
@@ -81,6 +81,7 @@ async function Dettaglio({ params }: Props) {
           <Prezzo valore={prezzo?.prezzo_finale ?? null} className="text-2xl" />
           <span className="text-xs text-slate">Prezzo riservato, IVA esclusa</span>
         </div>
+        {prezzo?.origine === SCONTO_DA_VERIFICARE && <p className="text-sm text-slate">{MESSAGGIO_SCONTISTICA}</p>}
 
         <form className="flex items-center gap-3" action={aggiungi}>
           <input type="hidden" name="cod_dav" value={articolo.cod_dav} />

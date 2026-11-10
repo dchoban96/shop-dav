@@ -202,14 +202,21 @@ export async function contaCarrello(clienteId: number): Promise<number> {
   return count ?? 0;
 }
 
-type Prezzo = { listino: number | null; sconto1: number; sconto2: number; prezzo_accordato: number | null; prezzo_finale: number | null };
+type Prezzo = { listino: number | null; sconto1: number; sconto2: number; prezzo_accordato: number | null; prezzo_finale: number | null; origine: string | null };
+
+/**
+ * Origine restituita da prezzo_cliente (migrazione 0011) quando lo sconto del cliente supera il 20 % e non c'è
+ * un prezzo speciale: il cliente vede il listino e questo messaggio.
+ */
+export const SCONTO_DA_VERIFICARE = "sconto_da_verificare";
+export const MESSAGGIO_SCONTISTICA = "Scontistica non disponibile: chiedi info all’agente o all’ufficio DAV";
 
 export async function prezzoCliente(clienteId: number, codDav: string): Promise<Prezzo | null> {
   const { data, error } = await supabaseAdmin().rpc("prezzo_cliente", { p_cliente_id: clienteId, p_cod_dav: codDav });
   if (error) throw new Error(`prezzoCliente: ${error.message}`);
   const p = Array.isArray(data) ? data[0] : data;
   if (!p) return null;
-  return { listino: num(p.listino), sconto1: Number(p.sconto1 ?? 0), sconto2: Number(p.sconto2 ?? 0), prezzo_accordato: num(p.prezzo_accordato), prezzo_finale: num(p.prezzo_finale) };
+  return { listino: num(p.listino), sconto1: Number(p.sconto1 ?? 0), sconto2: Number(p.sconto2 ?? 0), prezzo_accordato: num(p.prezzo_accordato), prezzo_finale: num(p.prezzo_finale), origine: p.origine ?? null };
 }
 
 export type PrezzoCatalogo = { listino: number | null; prezzo_finale: number | null; origine: string };

@@ -188,7 +188,9 @@ Regole (decise con l'ufficio il 10/11/2026), per ogni cliente e articolo vince l
 4. Altrimenti **listino del cliente** (anagrafica; 0 = listino 2) con gli sconti di listino, come la funzione Graphite.
 In più gli sconti in anagrafica del cliente diventano uno sconto generale. Listino e prezzo netto sono al centesimo;
 il terzo sconto e oltre si combinano nel secondo (se non sta in 2 decimali la condizione si scarta e il rapporto lo dice).
-**Sconti oltre il 20 %** (complessivi, esclusi i prezzi speciali): nell'ordine inviato a NTS le note iniziano con
+**Sconti oltre il 20 %** (complessivi, esclusi i prezzi speciali): dalla migrazione 0011 il cliente vede nello shop il
+listino con "scontistica non disponibile, chiedi info all'agente o all'ufficio DAV" e ordina a listino; l'email
+all'ufficio elenca quegli articoli. Se comunque arriva a NTS una riga con sconto oltre il 20 %, le note iniziano con
 `CONTROLLARE SCONTISTICA: <articolo> -<sconto>%`, l'email all'ufficio lo ripete, la scheda cliente li segna
 "da controllare" e il rapporto dell'import li elenca.
 

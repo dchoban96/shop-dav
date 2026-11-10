@@ -15,7 +15,7 @@ import { Contenitore } from "@/components/Contenitore";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogoFornitore } from "@/components/LogoFornitore";
-import { clientePerCodice, prezziCliente } from "@/lib/dati/ordini";
+import { clientePerCodice, MESSAGGIO_SCONTISTICA, prezziCliente, SCONTO_DA_VERIFICARE } from "@/lib/dati/ordini";
 import { leggiSessione } from "@/lib/sessione";
 
 export const metadata: Metadata = { title: "Catalogo" };
@@ -81,7 +81,9 @@ async function Risultati({ searchParams }: Props) {
         <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {ris.articoli.map((a) => (
             <li key={a.cod_dav}>
-              <SchedaArticolo articolo={a} stato={disponibilita(a.giacenza, soglia)} prezzo={prezzi.get(a.cod_dav)?.prezzo_finale ?? null} />
+              <SchedaArticolo articolo={a} stato={disponibilita(a.giacenza, soglia)} prezzo={prezzi.get(a.cod_dav)?.prezzo_finale ?? null}
+                nota={prezzi.get(a.cod_dav)?.origine === SCONTO_DA_VERIFICARE ? MESSAGGIO_SCONTISTICA : null}
+              />
             </li>
           ))}
         </ul>

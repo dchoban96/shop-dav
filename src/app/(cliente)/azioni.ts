@@ -10,7 +10,9 @@ import {
   clientePerCodice,
   confermaOrdine,
   ordinePerId,
+  prezziCliente,
   rimuoviRiga,
+  SCONTO_DA_VERIFICARE,
   segnaEmailInviata,
   type Cliente,
 } from "@/lib/dati/ordini";
@@ -110,7 +112,10 @@ export async function conferma(formData: FormData): Promise<void> {
   const dettaglio = await ordinePerId(c.id, ordine.id);
   if (dettaglio) {
     const { email_ordini } = await leggiImpostazioni();
-    const esito = await inviaEmailOrdine({ cliente: c, ordine: dettaglio.ordine, righe: dettaglio.righe, emailUfficio: email_ordini });
+    // Articoli ordinati a listino perché lo sconto del cliente supera il 20 % (0011): l'ufficio li verifica.
+    const attuali = await prezziCliente(c.id, dettaglio.righe.map((r) => r.cod_dav)).catch(() => new Map());
+    const scontiDaVerificare = dettaglio.righe.filter((r) => attuali.get(r.cod_dav)?.origine === SCONTO_DA_VERIFICARE).map((r) => r.cod_dav);
+    const esito = await inviaEmailOrdine({ cliente: c, ordine: dettaglio.ordine, righe: dettaglio.righe, emailUfficio: email_ordini, scontiDaVerificare });
     if (esito.inviata) await segnaEmailInviata(ordine.id);
   }
   refresh();

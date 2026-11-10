@@ -58,7 +58,7 @@ async function main() {
     insert into giacenze (cod_dav, quantita) values ('FARMIR', 0), ('A4803', 1), ('ALTRO', 50);
     insert into clienti (codice_nts, ragione_sociale) values ('C001', 'Pasticceria Prova');
     insert into condizioni_cliente (cliente_id, tipo, sconto1, sconto2) values (1, 'generale', 10, 0);
-    insert into condizioni_cliente (cliente_id, tipo, famiglia_id, sconto1, sconto2) values (1, 'famiglia', 1, 20, 5);
+    insert into condizioni_cliente (cliente_id, tipo, famiglia_id, sconto1, sconto2) values (1, 'famiglia', 1, 10, 5);
     insert into condizioni_cliente (cliente_id, tipo, cod_dav, prezzo_accordato) values (1, 'articolo', 'A4803', 17.50);
   `);
 
@@ -83,7 +83,7 @@ async function main() {
   const p1 = (await db.query<P>(`select * from prezzo_cliente(1, 'A4803')`)).rows[0];
   assert(p1.origine === "prezzo_accordato" && Number(p1.prezzo_finale) === 17.5, `accordato: ${JSON.stringify(p1)}`);
   const p2 = (await db.query<P>(`select * from prezzo_cliente(1, 'FARMIR')`)).rows[0];
-  assert(p2.origine === "famiglia" && Number(p2.prezzo_finale) === 22.8, `famiglia: ${JSON.stringify(p2)}`); // 30 × 0.8 × 0.95
+  assert(p2.origine === "famiglia" && Number(p2.prezzo_finale) === 25.65, `famiglia: ${JSON.stringify(p2)}`); // 30 × 0.9 × 0.95
   const p3 = (await db.query<P>(`select * from prezzo_cliente(1, 'ALTRO')`)).rows[0];
   assert(p3.origine === "generale" && Number(p3.prezzo_finale) === 9, `generale: ${JSON.stringify(p3)}`);
   await db.exec(`insert into clienti (codice_nts, ragione_sociale) values ('C002', 'Senza condizioni')`);
@@ -97,7 +97,7 @@ async function main() {
   assert(pb.length === 3, `prezzi_cliente: ${pb.length} righe invece di 3`);
   const perCod = Object.fromEntries(pb.map((r) => [r.cod_dav, r]));
   assert(Number(perCod.A4803.prezzo_finale) === 17.5 && perCod.A4803.origine === "prezzo_accordato", `prezzi_cliente A4803: ${JSON.stringify(perCod.A4803)}`);
-  assert(Number(perCod.FARMIR.prezzo_finale) === 22.8 && Number(perCod.ALTRO.prezzo_finale) === 9, `prezzi_cliente famiglia/generale: ${JSON.stringify(pb)}`);
+  assert(Number(perCod.FARMIR.prezzo_finale) === 25.65 && Number(perCod.ALTRO.prezzo_finale) === 9, `prezzi_cliente famiglia/generale: ${JSON.stringify(pb)}`);
 
   // conferma_ordine: prezzi copiati riga per riga, totale, storico e mensili aggiornati
   await db.exec(`
@@ -105,11 +105,11 @@ async function main() {
     insert into righe_ordine (ordine_id, cod_dav, descrizione, quantita) values (1, 'FARMIR', 'FARCITURA MIRTILLI KG.6', 2), (1, 'A4803', 'UOVA', 1);
   `);
   const conf = (await db.query<{ stato: string; totale_netto: string }>(`select stato, totale_netto from conferma_ordine(1, current_date + 1, '  ')`)).rows[0];
-  assert(conf.stato === "inviato" && Number(conf.totale_netto) === 63.1, `conferma_ordine: ${JSON.stringify(conf)}`); // 22.8 × 2 + 17.5
+  assert(conf.stato === "inviato" && Number(conf.totale_netto) === 68.8, `conferma_ordine: ${JSON.stringify(conf)}`); // 25.65 × 2 + 17.5
   const riga = (await db.query<{ prezzo_finale: string; origine: string | null }>(`select prezzo_finale, null as origine from righe_ordine where ordine_id = 1 and cod_dav = 'A4803'`)).rows[0];
   assert(Number(riga.prezzo_finale) === 17.5, `prezzo copiato in riga: ${JSON.stringify(riga)}`);
   const st = (await db.query<{ n: number; q: string; f: string }>(`select n_ordini_12m n, ultima_quantita q, fatturato_12m f from storico_acquisti where cliente_id = 1 and cod_dav = 'FARMIR'`)).rows[0];
-  assert(st && Number(st.n) === 1 && Number(st.q) === 2 && Number(st.f) === 45.6, `storico: ${JSON.stringify(st)}`);
+  assert(st && Number(st.n) === 1 && Number(st.q) === 2 && Number(st.f) === 51.3, `storico: ${JSON.stringify(st)}`);
   const me = (await db.query<{ n: string }>(`select count(*) n from acquisti_mensili where cliente_id = 1`)).rows[0];
   assert(Number(me.n) === 2, `mensili: ${me.n}`);
   let doppia = false;
@@ -130,7 +130,7 @@ async function main() {
   const presi = (await db.query<{ c: Claim }>(`select claim_ordini_nts(5) c`)).rows[0].c;
   assert(presi.length === 1 && presi[0].riferimento_nts === "SHOP-000001" && presi[0].cliente.codice_nts === "C001", `claim: ${JSON.stringify(presi)}`);
   const rFar = presi[0].righe.find((r) => r.cod_dav === "FARMIR")!;
-  assert(rFar.quantita === "2.000" && rFar.prezzo_listino === "30.0000" && rFar.sconto1 === "20.000", `claim righe come testo: ${JSON.stringify(rFar)}`);
+  assert(rFar.quantita === "2.000" && rFar.prezzo_listino === "30.0000" && rFar.sconto1 === "10.000", `claim righe come testo: ${JSON.stringify(rFar)}`);
   assert(presi[0].righe.find((r) => r.cod_dav === "A4803")!.prezzo_accordato === "17.5000", "claim: prezzo accordato");
   const ancora = (await db.query<{ c: Claim }>(`select claim_ordini_nts(5) c`)).rows[0].c;
   assert(ancora.length === 0, "claim: lo stesso ordine non va preso due volte");
@@ -325,7 +325,25 @@ async function main() {
   const rip = await pc("C006", "A4803");
   assert(Number(rip.listino) === 20 && Number(rip.prezzo_finale) === 20, `senza listini_nts vale articoli.prezzo_listino: ${JSON.stringify(rip)}`);
   const vecchio = (await db.query<P>(`select * from prezzo_cliente(1, 'FARMIR')`)).rows[0];
-  assert(Number(vecchio.prezzo_finale) === 22.8, `famiglia invariata: ${JSON.stringify(vecchio)}`);
+  assert(Number(vecchio.prezzo_finale) === 25.65, `famiglia invariata: ${JSON.stringify(vecchio)}`);
+  // Sconti oltre il 20 % (0011): al cliente il listino, origine sconto_da_verificare; PS e sconti fino al 20 % invariati
+  await db.exec(`
+    insert into condizioni_cliente (cliente_id, tipo, cod_dav, sconto1, origine)
+      select id, 'articolo', 'A4803', 50, 'storico_sconto' from clienti where codice_nts = 'C005';
+    insert into condizioni_cliente (cliente_id, tipo, cod_dav, sconto1, sconto2, origine)
+      select id, 'articolo', 'FARMIR', 15, 10, 'nts_sconto' from clienti where codice_nts = 'C005';
+    insert into condizioni_cliente (cliente_id, tipo, cod_dav, sconto1, origine)
+      select id, 'articolo', 'ALTRO', 20, 'storico_sconto' from clienti where codice_nts = 'C005';
+  `);
+  const alto = await pc("C005", "A4803");
+  assert(alto.origine === "sconto_da_verificare" && Number(alto.prezzo_finale) === 20 && Number(alto.sconto1) === 0, `sconto 50 %: listino: ${JSON.stringify(alto)}`);
+  const cascata = await pc("C005", "FARMIR");
+  assert(cascata.origine === "sconto_da_verificare" && Number(cascata.prezzo_finale) === 30, `15+10 = 23,5 %: listino: ${JSON.stringify(cascata)}`);
+  const venti = await pc("C005", "ALTRO");
+  assert(venti.origine === "articolo" && Number(venti.prezzo_finale) === 8, `20 % esatto resta: ${JSON.stringify(venti)}`);
+  assert((await pc("C004", "MOZGIU1")).origine === "prezzo_accordato", "prezzo speciale invariato");
+  assert(Number((await pc("C004", "OLIGI5")).prezzo_finale) === 2.01, "15 % invariato");
+
   let origineNegata = false;
   try {
     await db.exec(`insert into condizioni_cliente (cliente_id, tipo, origine) values (1, 'generale', 'inventata')`);

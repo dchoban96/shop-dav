@@ -60,10 +60,10 @@ export function Prezzo({ valore, className }: { valore: number | null; className
   return <span className={`prezzo text-lg ${className ?? ""}`}>{testo}</span>;
 }
 
-type Props = { articolo: Articolo; stato: Disponibilita; prezzo: number | null };
+type Props = { articolo: Articolo; stato: Disponibilita; prezzo: number | null; nota?: string | null };
 
 /** Riga/card articolo: lista su telefono, card in griglia da sm in su. `prezzo` è quello del cliente, mai il listino. */
-export function SchedaArticolo({ articolo, stato, prezzo }: Props) {
+export function SchedaArticolo({ articolo, stato, prezzo, nota }: Props) {
   const nome = articolo.descrizione_pulita ?? articolo.descrizione_nts;
   return (
     <article className="flex gap-4 rounded-lg border border-azzurro/40 bg-bianco p-3 sm:flex-col sm:p-4">
@@ -88,6 +88,7 @@ export function SchedaArticolo({ articolo, stato, prezzo }: Props) {
           <Prezzo valore={prezzo} />
           <BadgeDisponibilita stato={stato} />
         </div>
+        {nota && <p className="text-xs text-slate">{nota}</p>}
         <form action={aggiungi} className="mt-2 flex items-center gap-2">
           <input type="hidden" name="cod_dav" value={articolo.cod_dav} />
           <label htmlFor={`qta-${articolo.cod_dav}`} className="sr-only">

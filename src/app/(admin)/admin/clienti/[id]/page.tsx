@@ -110,7 +110,9 @@ async function Scheda({ params }: Props) {
                         </span>
                       )}
                       {k.prezzo_accordato === null && scontoComplessivo(k.sconto1, k.sconto2) > SOGLIA_SCONTO_CONTROLLO && (
-                        <span className="block text-xs font-semibold text-rosso">da controllare</span>
+                        <span className="block text-xs font-semibold text-rosso" title="Oltre il 20 % il cliente vede il listino e il messaggio “chiedi info all’agente o all’ufficio DAV”">
+                          da controllare · al cliente: listino
+                        </span>
                       )}
                     </td>
                     <td className="py-1.5 text-right">{formattaPrezzo(k.prezzo_accordato) ?? "—"}</td>

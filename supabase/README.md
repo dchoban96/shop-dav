@@ -26,6 +26,10 @@ Migrazioni SQL in `migrations/`, in ordine:
     sconti di listino), `clienti.listino_nts`, `condizioni_cliente.origine` e `rif_storico`; `prezzo_cliente` usa il
     listino del cliente e arrotonda il prezzo finale al centesimo. I dati li scrive il connettore (`importa-prezzi`).
 
+11. `0011_sconti_oltre_soglia.sql` — se il cliente non ha un prezzo speciale e la sua condizione dà uno sconto
+    complessivo oltre il 20 %, `prezzo_cliente` restituisce il listino (origine `sconto_da_verificare`): lo shop
+    mostra "scontistica non disponibile, chiedi info all'agente o all'ufficio DAV".
+
 ## Applicarle
 
 Con la CLI Supabase collegata al progetto:

@@ -11,8 +11,11 @@ import {
   domani,
   formattaData,
   GIORNI_SETTIMANA,
+  MESSAGGIO_SCONTISTICA,
+  prezziCliente,
   prossimaConsegna,
   righeOrdine,
+  SCONTO_DA_VERIFICARE,
   type RigaOrdine,
 } from "@/lib/dati/ordini";
 import { leggiSessione } from "@/lib/sessione";
@@ -29,7 +32,7 @@ type Props = { searchParams: Promise<{ errore?: string }> };
 const campo = "rounded-md border border-azzurro bg-bianco px-3 py-2 text-sm";
 const bottoneQta = "flex h-10 w-10 items-center justify-center rounded-md text-bianco transition-colors";
 
-function RigaCarrello({ riga }: { riga: RigaOrdine }) {
+function RigaCarrello({ riga, scontoDaVerificare = false }: { riga: RigaOrdine; scontoDaVerificare?: boolean }) {
   const articoloFinto = {
     cod_dav: riga.cod_dav, descrizione_nts: riga.descrizione, descrizione_pulita: riga.descrizione, um: riga.um, pezzi_confezione: null,
     prezzo_listino: null, foto_path: riga.foto_path, scheda_pdf_path: null, top80: false,
@@ -57,6 +60,7 @@ function RigaCarrello({ riga }: { riga: RigaOrdine }) {
               Listino {formattaPrezzo(riga.prezzo_listino)} · <span className="font-semibold text-navy">sconto {sconto}</span>
             </p>
           )}
+          {scontoDaVerificare && <p className="text-xs text-slate">{MESSAGGIO_SCONTISTICA}</p>}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -127,6 +131,8 @@ async function Contenuto({ searchParams }: Props) {
   if (!cliente) redirect("/accedi");
   const bozza = await carrelloBozza(cliente.id, false);
   const righe = bozza ? await righeOrdine(bozza.id) : [];
+  // Articoli con sconto oltre il 20 % (migrazione 0011): prezzo di listino e messaggio "chiedi info".
+  const prezziAttuali = righe.length ? await prezziCliente(cliente.id, righe.map((r) => r.cod_dav)) : new Map();
 
   if (righe.length === 0) {
     return (
@@ -154,7 +160,7 @@ async function Contenuto({ searchParams }: Props) {
     <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_360px]">
       <ul className="space-y-3">
         {righe.map((r) => (
-          <RigaCarrello key={r.id} riga={r} />
+          <RigaCarrello key={r.id} riga={r} scontoDaVerificare={prezziAttuali.get(r.cod_dav)?.origine === SCONTO_DA_VERIFICARE} />
         ))}
       </ul>
 

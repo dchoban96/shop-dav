@@ -11,7 +11,7 @@ import { formattaData, type Cliente, type Ordine, type RigaOrdine } from "@/lib/
 import { avvisoScontistica, riepilogoSconti, testoSconto } from "@/lib/sconti";
 import { escapeHtml as h, inviaEmail } from "@/lib/email/invio";
 
-type Dati = { cliente: Cliente; ordine: Ordine; righe: RigaOrdine[]; emailUfficio?: string };
+type Dati = { cliente: Cliente; ordine: Ordine; righe: RigaOrdine[]; emailUfficio?: string; scontiDaVerificare?: string[] };
 type Opzioni = { urlAdmin?: string; notaUfficio?: string };
 
 /** Riga per l'ufficio su cosa succede in NTS. Vuota se l'ordine non ha riferimento (migrazione 0007 non applicata). */
@@ -94,7 +94,10 @@ export async function inviaEmailOrdine(dati: Dati): Promise<{ inviata: boolean; 
   const urlAdmin = `${process.env.APP_URL || "http://localhost:3000"}/admin/ordini/${dati.ordine.id}`;
   const rif = dati.ordine.riferimento_nts ? `[${dati.ordine.riferimento_nts}] ` : "";
   // Prima l'avviso sugli sconti oltre il 20 % (da controllare), poi la riga su NTS.
-  const notaUfficio = [avvisoScontistica(dati.righe), notaNts(dati.ordine)].filter(Boolean).join(" ") || undefined;
+  const daVerificare = dati.scontiDaVerificare?.length
+    ? `Scontistica da verificare con il cliente (sconto abituale oltre il 20 %, ordinato a listino): ${dati.scontiDaVerificare.join(", ")}.`
+    : null;
+  const notaUfficio = [avvisoScontistica(dati.righe), daVerificare, notaNts(dati.ordine)].filter(Boolean).join(" ") || undefined;
   const opz: Opzioni = { urlAdmin, notaUfficio };
 
   const esito = await inviaEmail({
