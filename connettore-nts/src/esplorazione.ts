@@ -19,7 +19,13 @@ export function valorePerParametro(p: Parametro, c: CasoProva): { valore: unknow
   const n = p.nome.replace(/^@/, "").toLowerCase();
   const t = p.tipo.toLowerCase();
   if (/ditta|codditt/.test(n)) return { valore: c.ditta, motivo: "ditta" };
-  if (/art|cod_?ar/.test(n) && c.articolo) return { valore: c.articolo, motivo: "articolo" };
+  // Prima i parametri "di contorno" della funzione Graphite: contengono anche "art" o "list" nel nome.
+  if (/variant/.test(n)) return { valore: "", motivo: "nessuna variante" };
+  if (/cambio/.test(n)) return { valore: 0, motivo: "cambio 0 (euro)" };
+  if (/nosconti/.test(n)) return { valore: 0, motivo: "0 = applica gli sconti di listino" };
+  if (/invert|gamma/.test(n)) return { valore: 0, motivo: "0 = gestione predefinita" };
+  if (/tipolist/.test(n)) return { valore: 1, motivo: "non usato dalla funzione" };
+  if (/codice_?art|codart|articolo/.test(n) && c.articolo) return { valore: c.articolo, motivo: "articolo" };
   if (/conto|cli|anagr/.test(n) && c.cliente !== null) return { valore: c.cliente, motivo: "cliente" };
   if (/list/.test(n)) return { valore: c.listino, motivo: "listino" };
   if (/dat|giorno/.test(n) || /date|time/.test(t)) return { valore: c.oggi, motivo: "data di oggi" };

@@ -21,6 +21,20 @@ test("parametri della funzione prezzo: valori dedotti dal nome", () => {
   assert.equal(valorePerParametro({ nome: "@xyz", tipo: "int" }, caso), undefined);
 });
 
+test("parametri reali di FNMG_GPH_PREZZO_LISTART2 (letti dal server il 10/11/2026)", () => {
+  const v = (nome: string, tipo: string) => valorePerParametro({ nome, tipo }, caso)?.valore;
+  assert.equal(v("@DITTA", "varchar"), "DAVNTS");
+  assert.equal(v("@CODICE_ARTICOLO", "varchar"), "OLIGI5");
+  assert.equal(v("@NUMERO_LISTINO", "decimal"), 2);
+  assert.equal(v("@TIPOLISTINO", "decimal"), 1);
+  assert.deepEqual(v("@DATA_ELABORAZIONE", "datetime"), new Date(2026, 10, 9));
+  assert.equal(v("@VARIANTE_ARTICOLO", "char"), "");
+  assert.equal(v("@CODICE_VALUTA", "smallint"), 0);
+  assert.equal(v("@CAMBIO", "decimal"), 0);
+  assert.equal(v("@NOSCONTILISTINO1", "decimal"), 0);
+  assert.equal(v("@PREZZOART_VAR_INVERTIGAMMA", "decimal"), 0);
+});
+
 test("colonne chiave e colonne utili ai prezzi (niente indirizzi né P. IVA)", () => {
   assert.deepEqual(colonneChiave(["codditt", "lc_codart", "lc_conto", "lc_prezzo"]), { articolo: ["lc_codart"], cliente: ["lc_conto"] });
   const anagra = colonnePrezzi(["an_conto", "an_descr1", "an_indir", "an_pariva", "an_listino", "an_clscan", "an_email"], "anagra");

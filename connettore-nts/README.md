@@ -142,6 +142,14 @@ Serve per progettare l'import del listino 2 e degli sconti cliente. Non scrive n
 
 Di anagra e artico il file riporta solo le colonne utili ai prezzi: niente indirizzi, partite IVA o contatti.
 
+Seconda ricognizione, sugli sconti (anche questa solo letture): profilo di come sono usati `listini` e `sconti`
+(per cliente, classe, listino, articolo, famiglia), decimali dei prezzi e, per il caso di prova, tutte le righe
+di listino e sconto che possono valere più le ultime righe d'ordine NTS di quel cliente per quell'articolo.
+```powershell
+npm run esplora-sconti -- --cliente <codice conto NTS> --articolo <codice articolo>
+```
+Il file finisce in `esplorazione\sconti-AAAAMMGG-hhmmss.txt`.
+
 ## Ricognizione documenti e scadenze (una volta, per il brief "Documenti e pagamenti del cliente")
 
 Comando di **sola lettura** su DAVNTS: colonne e conteggi di `testmag`/`movmag`, tabelle con nomi da scadenze, pagamenti,
