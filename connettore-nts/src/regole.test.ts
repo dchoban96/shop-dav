@@ -98,3 +98,19 @@ test("note di testata senza nota del cliente", () => {
   assert.equal(noteTestata(null, "2026-01-05"), "Consegna richiesta: 05/01/2026");
   assert.equal(noteTestata("  a\n b ", null), "a b");
 });
+
+test("sconto oltre il 20 %: avviso CONTROLLARE SCONTISTICA in testa alle note (mai per i prezzi speciali)", async () => {
+  const { scontoComplessivo } = await import("./regole.js");
+  assert.equal(scontoComplessivo(10, 5), 14.5);
+  assert.equal(scontoComplessivo(15, 10), 23.5);
+  const riga = ordineProva().righe[0];
+  const con = (r: Partial<OrdineShop["righe"][number]>) => preparaOrdine(ordineProva({ righe: [{ ...riga, note: null, ...r }] }), ctx);
+  const alto = con({ sconto1: "50", sconto2: "0" });
+  assert.equal(alto.note, "CONTROLLARE SCONTISTICA: DOLFOR -50% - PROVA SHOP - NON EVADERE - Consegna richiesta: 10/11/2026");
+  assert.ok(alto.avvisi.some((a) => a.startsWith("Sconti oltre il 20%")));
+  assert.match(con({ sconto1: "15", sconto2: "10" }).note, /^CONTROLLARE SCONTISTICA: DOLFOR -23,5% - /);
+  assert.doesNotMatch(con({ sconto1: "20", sconto2: "0" }).note, /CONTROLLARE/, "20 % esatto non supera la soglia");
+  assert.doesNotMatch(con({ prezzo_accordato: "1.0000", sconto1: "60" }).note, /CONTROLLARE/, "prezzo speciale: niente avviso");
+  const lungo = preparaOrdine(ordineProva({ note: "x".repeat(300), righe: [{ ...riga, note: null, sconto1: "40", sconto2: "0" }] }), ctx);
+  assert.ok(lungo.note.startsWith("CONTROLLARE SCONTISTICA: DOLFOR -40%") && lungo.note.length === 200, "l'avviso resta anche se la nota va troncata");
+});

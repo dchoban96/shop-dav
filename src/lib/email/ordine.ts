@@ -8,7 +8,7 @@
  */
 import { formattaPrezzo } from "@/lib/dati/catalogo";
 import { formattaData, type Cliente, type Ordine, type RigaOrdine } from "@/lib/dati/ordini";
-import { riepilogoSconti, testoSconto } from "@/lib/sconti";
+import { avvisoScontistica, riepilogoSconti, testoSconto } from "@/lib/sconti";
 import { escapeHtml as h, inviaEmail } from "@/lib/email/invio";
 
 type Dati = { cliente: Cliente; ordine: Ordine; righe: RigaOrdine[]; emailUfficio?: string };
@@ -93,7 +93,9 @@ export async function inviaEmailOrdine(dati: Dati): Promise<{ inviata: boolean; 
   const ufficio = dati.emailUfficio || process.env.EMAIL_ORDINI || "info@davsnc.it";
   const urlAdmin = `${process.env.APP_URL || "http://localhost:3000"}/admin/ordini/${dati.ordine.id}`;
   const rif = dati.ordine.riferimento_nts ? `[${dati.ordine.riferimento_nts}] ` : "";
-  const opz: Opzioni = { urlAdmin, notaUfficio: notaNts(dati.ordine) };
+  // Prima l'avviso sugli sconti oltre il 20 % (da controllare), poi la riga su NTS.
+  const notaUfficio = [avvisoScontistica(dati.righe), notaNts(dati.ordine)].filter(Boolean).join(" ") || undefined;
+  const opz: Opzioni = { urlAdmin, notaUfficio };
 
   const esito = await inviaEmail({
     a: [ufficio],

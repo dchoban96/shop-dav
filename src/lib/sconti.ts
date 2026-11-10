@@ -42,3 +42,22 @@ export function riepilogoSconti(righe: (Riga & { quantita: number })[]): { listi
   }
   return { listino, risparmio: Math.max(0, listino - netto) };
 }
+
+/** Oltre questo sconto complessivo l'ufficio deve controllare la scontistica (decisione del 10/11/2026; vale anche nel connettore NTS). */
+export const SOGLIA_SCONTO_CONTROLLO = 20;
+
+/** Sconto complessivo di due sconti a cascata, in percentuale (10 + 5 → 14,5). */
+export function scontoComplessivo(sconto1: number, sconto2: number): number {
+  return Math.round((1 - (1 - sconto1 / 100) * (1 - sconto2 / 100)) * 100 * 1e6) / 1e6;
+}
+
+/**
+ * "Controllare la scontistica: SALBAS1 −50 %" se qualche riga ha uno sconto complessivo oltre la soglia;
+ * null altrimenti. I prezzi speciali (prezzo accordato) non contano.
+ */
+export function avvisoScontistica(righe: (Pick<Riga, "sconto1" | "sconto2" | "prezzo_accordato"> & { cod_dav: string })[]): string | null {
+  const alti = righe
+    .filter((r) => r.prezzo_accordato === null && scontoComplessivo(r.sconto1, r.sconto2) > SOGLIA_SCONTO_CONTROLLO)
+    .map((r) => `${r.cod_dav} −${pct.format(scontoComplessivo(r.sconto1, r.sconto2))} %`);
+  return alti.length ? `Controllare la scontistica (sconto oltre il ${SOGLIA_SCONTO_CONTROLLO} %): ${alti.join(", ")}.` : null;
+}

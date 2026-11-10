@@ -174,10 +174,7 @@ export function preparaOrdine(o: OrdineShop, ctx: Contesto): OrdinePreparato {
 
   let note = noteTestata(o.note, o.data_consegna_richiesta);
   const maxNote = lunghezzaMax(ctx.colTestata.get("NOTE"));
-  if (maxNote !== null && note.length > maxNote) {
-    note = note.slice(0, maxNote);
-    avvisi.push(`Nota d'ordine troncata a ${maxNote} caratteri`);
-  }
+  const scontiAlti: string[] = [];
   let dataCons: Date | null = null;
   if (ctx.usaDataCons && o.data_consegna_richiesta) {
     const c = dataGiorno(o.data_consegna_richiesta);
@@ -244,6 +241,9 @@ export function preparaOrdine(o: OrdineShop, ctx: Contesto): OrdinePreparato {
     }
 
     righe.push({ tipo: "articolo", nr: ++nr, codice: art.codice, quantita, prezzo, sconto1, sconto2, um });
+    // Sconto complessivo oltre la soglia (non per i prezzi speciali, che hanno sconti 0): l'ufficio controlla.
+    const effettivo = scontoComplessivo(sconto1, sconto2);
+    if (effettivo > SOGLIA_SCONTO) scontiAlti.push(`${art.codice} -${formattaPct(effettivo)}%`);
 
     // Nota di riga: riga descrittiva 'D' subito dopo l'articolo, massimo 255 caratteri.
     const nota = (r.note ?? "").replace(/\s+/g, " ").trim();
@@ -257,5 +257,26 @@ export function preparaOrdine(o: OrdineShop, ctx: Contesto): OrdinePreparato {
     }
   }
 
+  // Avviso in testa alle note (si vede subito in Business e non si perde se la nota va troncata).
+  if (scontiAlti.length) {
+    const avviso = `CONTROLLARE SCONTISTICA: ${scontiAlti.join(", ")}`;
+    note = note ? `${avviso} - ${note}` : avviso;
+    avvisi.push(`Sconti oltre il ${SOGLIA_SCONTO}%: ${scontiAlti.join(", ")} (avviso nelle note dell'ordine)`);
+  }
+  if (maxNote !== null && note.length > maxNote) {
+    note = note.slice(0, maxNote);
+    avvisi.push(`Nota d'ordine troncata a ${maxNote} caratteri`);
+  }
+
   return { riferimento, conto, anno: g.anno, dataDoc, dataCons, note, righe, avvisi };
 }
+
+/** Oltre questa percentuale di sconto complessivo l'ordine porta l'avviso "controllare la scontistica" (decisione del 10/11/2026). */
+export const SOGLIA_SCONTO = 20;
+
+/** Sconto complessivo di due sconti a cascata (10 + 5 → 14,5). */
+export function scontoComplessivo(sconto1: number, sconto2: number): number {
+  return Math.round((1 - (1 - sconto1 / 100) * (1 - sconto2 / 100)) * 100 * 1e6) / 1e6;
+}
+
+const formattaPct = (n: number) => String(Math.round(n * 100) / 100).replace(".", ",");

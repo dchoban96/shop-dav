@@ -16,6 +16,7 @@ import sql from "mssql";
 import { CARTELLA, DITTA, leggiConfig } from "./config.js";
 import { tabellaTesto, testo } from "./esplorazione.js";
 import { configurazioneSql } from "./nts.js";
+import { scontoComplessivo, SOGLIA_SCONTO } from "./regole.js";
 import { centesimi, combinaSconti, listinoCliente, risolvi, type Condizione, type PrezzoPersonale, type RigaStorico, type ScontoCliente } from "./prezzi.js";
 import { messaggio } from "./registro.js";
 
@@ -274,6 +275,24 @@ async function main() {
       `  totale: ${condizioni.length} · scartate: ${scarti.length}`,
       ...scarti.slice(0, 40).map((s) => `  SCARTO cliente ${s.conto} articolo ${s.cod}: ${s.motivo}`),
       ...(scarti.length > 40 ? [`  … altri ${scarti.length - 40} scarti`] : []),
+    );
+    // Sconti oltre la soglia: nell'ordine diventano l'avviso "CONTROLLARE SCONTISTICA" (non per i prezzi speciali).
+    const contoDi = new Map([...clientiShop].map(([conto, id]) => [id, conto]));
+    const alti = condizioni
+      .filter((c) => c.prezzo_accordato === null && scontoComplessivo(Number(c.sconto1), Number(c.sconto2)) > SOGLIA_SCONTO)
+      .map((c) => ({
+        cliente: contoDi.get(c.cliente_id as number) ?? "?",
+        articolo: c.cod_dav ?? "(tutti)",
+        origine: c.origine,
+        sconto: `${c.sconto1}+${c.sconto2}`,
+        complessivo: scontoComplessivo(Number(c.sconto1), Number(c.sconto2)),
+        da: c.rif_storico ?? "",
+      }))
+      .sort((a, b) => b.complessivo - a.complessivo);
+    scrivi(
+      "",
+      `  sconti oltre il ${SOGLIA_SCONTO}% (negli ordini compare "CONTROLLARE SCONTISTICA"): ${alti.length}`,
+      ...tabellaTesto(alti, 80),
     );
     if (clienteDettaglio) {
       sezione(`4. Dettaglio cliente ${clienteDettaglio}${articoloDettaglio ? ` articolo ${articoloDettaglio}` : ""}`);

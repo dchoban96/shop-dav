@@ -7,6 +7,7 @@ import { schedaCliente } from "@/lib/dati/admin";
 import { formattaData, GIORNI_SETTIMANA, storicoCliente } from "@/lib/dati/ordini";
 import { Contenitore } from "@/components/Contenitore";
 import { DocumentiCliente } from "@/components/admin/DocumentiCliente";
+import { scontoComplessivo, SOGLIA_SCONTO_CONTROLLO } from "@/lib/sconti";
 
 /** Sconto percentuale implicito tra prezzo fisso e listino, es. "≈ 9,2 %"; null se non calcolabile o nullo. */
 function scontoImplicito(prezzo: number | null, listino: number | null): string | null {
@@ -107,6 +108,9 @@ async function Scheda({ params }: Props) {
                         <span className="text-slate" title="Ricavato da prezzo fisso e listino: lo sconto NTS ufficiale non è ancora importato">
                           {scontoImplicito(k.prezzo_accordato, k.listino) ?? "—"}
                         </span>
+                      )}
+                      {k.prezzo_accordato === null && scontoComplessivo(k.sconto1, k.sconto2) > SOGLIA_SCONTO_CONTROLLO && (
+                        <span className="block text-xs font-semibold text-rosso">da controllare</span>
                       )}
                     </td>
                     <td className="py-1.5 text-right">{formattaPrezzo(k.prezzo_accordato) ?? "—"}</td>
