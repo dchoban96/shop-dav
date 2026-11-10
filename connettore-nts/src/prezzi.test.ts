@@ -75,3 +75,19 @@ test("listino del cliente: 0 o assente → 2", () => {
   assert.equal(listinoCliente(1), 1);
   assert.equal(listinoCliente(2), 2);
 });
+
+test("omaggi (sconto 100 %): mai una condizione, si passa alla regola successiva", async () => {
+  const { omaggio } = await import("./prezzi.js");
+  assert.equal(omaggio([100, 0]), true);
+  assert.equal(omaggio([0, 100]), true);
+  assert.equal(omaggio([50, 50]), false);
+  assert.equal(omaggio([0, 0]), false);
+  const solo = risolvi(12.91, storico(12.91, [100, 0]), null, null);
+  assert.equal(solo.condizione, null, "storico in omaggio e niente altro: vale il listino");
+  assert.match(solo.scarti[0].motivo, /omaggio/);
+  assert.equal(risolvi(12.91, storico(12.91, [100]), null, { sconti: [10], dal: null, al: null }).condizione?.origine, "nts_sconto");
+  const ntsTotale = risolvi(9, null, null, { sconti: [100], dal: null, al: null });
+  assert.equal(ntsTotale.condizione, null);
+  assert.match(ntsTotale.scarti[0].motivo, /100 %/);
+  assert.equal(risolvi(10, storico(10, [50, 50]), null, null).condizione?.origine, "storico_sconto", "75 % resta: è solo da controllare");
+});

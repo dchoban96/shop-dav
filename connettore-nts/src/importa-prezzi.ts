@@ -85,6 +85,10 @@ async function main() {
     const colOrd = await colonneDi("movord");
     const colMag = await colonneDi("movmag");
     const scontiSql = (pref: string, cols: Set<string>) => [1, 2, 3, 4, 5, 6].map((i) => (cols.has(`${pref}_scont${i}`) ? `m.${pref}_scont${i} AS sc${i}` : `0 AS sc${i}`)).join(", ");
+    // Omaggi (sconto 100 % su uno qualsiasi degli sconti): non sono un prezzo praticato, si saltano
+    // e vale la riga venduta precedente (import del 10/11 09:24: 1.540 condizioni oltre il 20 %, molte a −100 %).
+    const nonOmaggioSql = (pref: string, cols: Set<string>) =>
+      [1, 2, 3, 4, 5, 6].filter((i) => cols.has(`${pref}_scont${i}`)).map((i) => `AND ISNULL(m.${pref}_scont${i}, 0) < 100`).join(" ");
     const umSql = (pref: string, cols: Set<string>) => (cols.has(`${pref}_unmis`) ? `AND (RTRIM(ISNULL(m.${pref}_unmis, '')) = '' OR m.${pref}_unmis = a.ar_unmis)` : "");
 
     // 3. NTS: letture ------------------------------------------------------------------------
@@ -138,7 +142,7 @@ async function main() {
            JOIN movord m ON m.codditt = t.codditt AND m.mo_tipork = t.td_tipork AND m.mo_anno = t.td_anno AND m.mo_serie = t.td_serie AND m.mo_numord = t.td_numord
            JOIN artico a ON a.codditt = m.codditt AND a.ar_codart = m.mo_codart
           WHERE t.codditt = @ditta AND t.td_tipork = 'R' AND t.td_datord >= @dal AND t.td_conto ${CLIENTI}
-            AND m.mo_prezzo > 0 AND m.mo_quant > 0 ${umSql("mo", colOrd)}
+            AND m.mo_prezzo > 0 AND m.mo_quant > 0 ${nonOmaggioSql("mo", colOrd)} ${umSql("mo", colOrd)}
          UNION ALL
          SELECT tm.tm_conto, m.mm_codart, tm.tm_datdoc, CASE tm.tm_tipork WHEN 'A' THEN 1 ELSE 2 END,
                 CASE tm.tm_tipork WHEN 'A' THEN 'Fattura ' ELSE 'DDT ' END + CAST(tm.tm_numdoc AS varchar(12)), m.mm_prezzo, ${scontiSql("mm", colMag)}
@@ -146,7 +150,7 @@ async function main() {
            JOIN movmag m ON m.codditt = tm.codditt AND m.mm_tipork = tm.tm_tipork AND m.mm_anno = tm.tm_anno AND m.mm_serie = tm.tm_serie AND m.mm_numdoc = tm.tm_numdoc
            JOIN artico a ON a.codditt = m.codditt AND a.ar_codart = m.mm_codart
           WHERE tm.codditt = @ditta AND tm.tm_tipork IN ('A', 'B') AND tm.tm_datdoc >= @dal AND tm.tm_conto ${CLIENTI}
-            AND m.mm_prezzo > 0 AND m.mm_quant > 0 ${umSql("mm", colMag)}
+            AND m.mm_prezzo > 0 AND m.mm_quant > 0 ${nonOmaggioSql("mm", colMag)} ${umSql("mm", colMag)}
        )
        SELECT conto, codart, data, doc, prezzo, sc1, sc2, sc3, sc4, sc5, sc6 FROM (
          SELECT *, ROW_NUMBER() OVER (PARTITION BY conto, codart ORDER BY data DESC, prio) AS n FROM righe) x

@@ -53,6 +53,11 @@ export function combinaSconti(sconti: number[]): { sconto1: number; sconto2: num
   return { sconto1, sconto2 };
 }
 
+/** Vero se gli sconti azzerano il prezzo (omaggio): mai una condizione, il prezzo nello shop sarebbe 0. */
+export function omaggio(sconti: number[]): boolean {
+  return sconti.reduce((acc, x) => acc * (1 - (Number(x) || 0) / 100), 1) <= 1e-6;
+}
+
 const isoGiorno = (d: Date | null) =>
   d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : null;
 const gg = (d: Date) => `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
@@ -79,6 +84,10 @@ export function risolvi(
 ): { condizione: Condizione | null; scarti: Scarto[] } {
   const scarti: Scarto[] = [];
 
+  if (storico && omaggio(storico.sconti)) {
+    scarti.push({ motivo: `riga di storico in omaggio (${rifStorico(storico)}): ignorata` });
+    storico = null;
+  }
   if (storico) {
     const conSconti = storico.sconti.some((x) => x !== 0);
     if (!conSconti) {
@@ -115,7 +124,9 @@ export function risolvi(
     };
   }
 
-  if (sconto && sconto.sconti.some((x) => x !== 0)) {
+  if (sconto && omaggio(sconto.sconti)) {
+    scarti.push({ motivo: "sconto NTS del 100 %: ignorato (il prezzo nello shop sarebbe 0)" });
+  } else if (sconto && sconto.sconti.some((x) => x !== 0)) {
     const c = combinaSconti(sconto.sconti);
     if (c) {
       return { condizione: { origine: "nts_sconto", prezzo_accordato: null, ...c, valido_dal: isoGiorno(sconto.dal), valido_al: isoGiorno(scadenza(sconto.al)), rif: null }, scarti };
