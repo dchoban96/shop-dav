@@ -66,7 +66,8 @@ type Props = { articolo: Articolo; stato: Disponibilita; prezzo: number | null; 
 export function SchedaArticolo({ articolo, stato, prezzo, nota }: Props) {
   const nome = articolo.descrizione_pulita ?? articolo.descrizione_nts;
   return (
-    <article className="flex gap-4 rounded-lg border border-azzurro/40 bg-bianco p-3 sm:flex-col sm:p-4">
+    // h-full: la card riempie la cella della griglia, così tutte le card di una riga hanno la stessa altezza
+    <article className="flex h-full gap-4 rounded-lg border border-azzurro/40 bg-bianco p-3 sm:flex-col sm:p-4">
       <Link href={`/catalogo/${encodeURIComponent(articolo.cod_dav)}`} className="shrink-0 sm:block">
         <FotoArticolo articolo={articolo} />
       </Link>
@@ -74,7 +75,8 @@ export function SchedaArticolo({ articolo, stato, prezzo, nota }: Props) {
         <div className="flex h-5 items-center">
           <LogoFornitore nome={nomeMarchio(articolo)} logo={articolo.fornitore?.logo_path} formato="inline" />
         </div>
-        <h3 className="font-sans text-sm font-semibold leading-snug text-navy">
+        {/* In griglia il titolo occupa sempre tre righe: prezzo e tasti restano alla stessa altezza in tutte le card */}
+        <h3 className="font-sans text-sm font-semibold leading-snug text-navy sm:min-h-[4.125em]">
           <Link href={`/catalogo/${encodeURIComponent(articolo.cod_dav)}`} className="hover:underline">
             {nome}
           </Link>
