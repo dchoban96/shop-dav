@@ -178,7 +178,8 @@ Porta nello shop i prezzi che il cliente vede in NTS e sul palmare. Su NTS **sol
 **non tocca Supabase** e scrive solo il rapporto `esplorazione\import-prezzi-AAAAMMGG-hhmmss.txt`.
 
 Regole (decise con l'ufficio il 10/11/2026), per ogni cliente e articolo vince la prima che vale:
-1. **Storico** degli ultimi 300 giorni (ultima riga di ordini, DDT, fatture, come Graphite):
+1. **Storico** degli ultimi 300 giorni (ultima riga di ordini, DDT, fatture, come Graphite; le righe in omaggio
+   non contano: sconto 100 %, per esempio "X+1" a Livigno, o riga di tipo omaggio "O", come l'omaggio con rivalsa):
    senza sconti e sotto il listino di oggi → **prezzo speciale** fisso (es. MOZGIU1 6,90 con listino 9,24);
    con sconti → **gli stessi sconti sul listino di oggi** (es. OLIGI5 2,28 −15 % → oggi 2,36 −15 % = 2,01);
    a prezzo pieno → si passa alla regola successiva.

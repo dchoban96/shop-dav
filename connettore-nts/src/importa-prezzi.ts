@@ -87,8 +87,13 @@ async function main() {
     const scontiSql = (pref: string, cols: Set<string>) => [1, 2, 3, 4, 5, 6].map((i) => (cols.has(`${pref}_scont${i}`) ? `m.${pref}_scont${i} AS sc${i}` : `0 AS sc${i}`)).join(", ");
     // Omaggi (sconto 100 % su uno qualsiasi degli sconti): non sono un prezzo praticato, si saltano
     // e vale la riga venduta precedente (import del 10/11 09:24: 1.540 condizioni oltre il 20 %, molte a −100 %).
+    // Omaggi con rivalsa: stesso prezzo, sconto 0, ma mm_stasino / mo_stasino = 'O' (TipoOmaggio=O in Graphite;
+    // visto sul DDT 19602, riga DOLMAS "4+2"). Anche questi si saltano: altrimenti toglierebbero lo sconto abituale.
     const nonOmaggioSql = (pref: string, cols: Set<string>) =>
-      [1, 2, 3, 4, 5, 6].filter((i) => cols.has(`${pref}_scont${i}`)).map((i) => `AND ISNULL(m.${pref}_scont${i}, 0) < 100`).join(" ");
+      [
+        ...[1, 2, 3, 4, 5, 6].filter((i) => cols.has(`${pref}_scont${i}`)).map((i) => `AND ISNULL(m.${pref}_scont${i}, 0) < 100`),
+        ...(cols.has(`${pref}_stasino`) ? [`AND ISNULL(m.${pref}_stasino, '') <> 'O'`] : []),
+      ].join(" ");
     const umSql = (pref: string, cols: Set<string>) => (cols.has(`${pref}_unmis`) ? `AND (RTRIM(ISNULL(m.${pref}_unmis, '')) = '' OR m.${pref}_unmis = a.ar_unmis)` : "");
 
     // 3. NTS: letture ------------------------------------------------------------------------
@@ -162,6 +167,7 @@ async function main() {
       `  clienti in anagrafica (conti 14xxxxxxx): ${anagra.length} · clienti reali nello shop: ${clientiShop.size} · articoli nello shop: ${articoliShop.size}`,
       `  listini validi oggi: ${listini.length} · sconti di listino: ${scontiListino.length} · prezzi personali: ${personali.length} · sconti cliente × articolo: ${scontiCliente.length}`,
       `  storico (ultima riga per cliente e articolo, dal ${testo(dal).slice(0, 10)}): ${storico.length}`,
+      `  righe omaggio escluse dallo storico: sconto 100 % e tipo omaggio "O" (ordini ${colOrd.has("mo_stasino") ? "sì" : "colonna assente"}, documenti ${colMag.has("mm_stasino") ? "sì" : "colonna assente"})`,
       `  colonne facoltative: sconti 3-6 ordini ${[3, 4, 5, 6].filter((i) => colOrd.has(`mo_scont${i}`)).length}/4, documenti ${[3, 4, 5, 6].filter((i) => colMag.has(`mm_scont${i}`)).length}/4 · UM ordini ${colOrd.has("mo_unmis") ? "sì" : "no"}, documenti ${colMag.has("mm_unmis") ? "sì" : "no"}`,
     );
 
